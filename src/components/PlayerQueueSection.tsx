@@ -55,9 +55,6 @@ export function PlayerQueueSection({
             <Text fw={700}>Queue</Text>
             <Badge variant="light">{queue.length}</Badge>
           </Group>
-          <Text c="dimmed" size="xs">
-            Click any item to play it
-          </Text>
         </Group>
 
         <Card withBorder radius="md" p={0}>

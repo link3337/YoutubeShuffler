@@ -11,3 +11,18 @@ This template should help get you started developing with Tauri, React and Types
 ```
 yt-dlp --flat-playlist -J "PLAYLIST_URL" > playlist.json
 ```
+
+## Twitch chat song requests
+
+- Open the app and use the **Twitch song requests** card.
+- Generate an OAUTH token and set it, press connect to chat.
+
+```
+!sr https://www.youtube.com/watch?v=dQw4w9WgXcQ
+```
+
+or
+
+```
+!songrequest dQw4w9WgXcQ
+```

@@ -13,15 +13,23 @@ import {
   sanitizeTitleForTextFile,
   uniqueBy
 } from '../utils/playlist';
+import { extractChatMessageFromIrcLine, extractRequestedVideoId } from '../utils/twitch';
 import { ImportCard } from './ImportCard';
 import { ManualInputCard } from './ManualInputCard';
 import { NowPlayingOutputCard } from './NowPlayingOutputCard';
 import { PlayerQueueSection } from './PlayerQueueSection';
 import { StatusMessage } from './StatusMessage';
+import { TwitchRequestCard } from './TwitchRequestCard';
 
 const STORAGE_KEY = 'ytpl_last';
 const NOW_PLAYING_FOLDER_STORAGE_KEY = 'ytpl_now_playing_folder';
 const NOW_PLAYING_FILE_NAME = 'current_song.txt';
+const TWITCH_CHANNEL_STORAGE_KEY = 'ytpl_twitch_channel';
+const TWITCH_USERNAME_STORAGE_KEY = 'ytpl_twitch_username';
+const TWITCH_TOKEN_STORAGE_KEY = 'ytpl_twitch_token';
+const TWITCH_SHADOWBANNED_USERS_STORAGE_KEY = 'ytpl_twitch_shadowbanned_users';
+const TWITCH_BLACKLISTED_SONGS_STORAGE_KEY = 'ytpl_twitch_blacklisted_songs';
+const MAX_REQUESTS_PER_USER = 5;
 
 type YTPlayerInstance = {
   loadVideoById: (args: { videoId: string }) => void;
@@ -67,6 +75,13 @@ export default function PlaylistShufflerApp() {
     videoId: ''
   });
   const [nowPlayingFolder, setNowPlayingFolder] = useState('');
+  const [twitchChannel, setTwitchChannel] = useState('');
+  const [twitchUsername, setTwitchUsername] = useState('');
+  const [twitchOauthToken, setTwitchOauthToken] = useState('');
+  const [shadowbannedUsers, setShadowbannedUsers] = useState('');
+  const [blacklistedSongs, setBlacklistedSongs] = useState('');
+  const [twitchConnected, setTwitchConnected] = useState(false);
+  const [requestCount, setRequestCount] = useState(0);
 
   const queueRef = useRef<VideoItem[]>(queue);
   const currentIndexRef = useRef(currentIndex);
@@ -74,6 +89,9 @@ export default function PlaylistShufflerApp() {
   const playerReadyRef = useRef(false);
   const playerContainerRef = useRef<HTMLDivElement | null>(null);
   const pendingPlayIndexRef = useRef<number | null>(null);
+  const twitchSocketRef = useRef<WebSocket | null>(null);
+  const nowPlayingRef = useRef(nowPlaying);
+  const userRequestCountsRef = useRef<Record<string, number>>({});
 
   const fileInputYtdlpRef = useRef<HTMLInputElement | null>(null);
   const fileInputHtmlRef = useRef<HTMLInputElement | null>(null);
@@ -97,9 +115,58 @@ export default function PlaylistShufflerApp() {
       if (stored) {
         setNowPlayingFolder(stored);
       }
+
+      const storedChannel = localStorage.getItem(TWITCH_CHANNEL_STORAGE_KEY);
+      if (storedChannel) {
+        setTwitchChannel(storedChannel);
+      }
+
+      const storedUsername = localStorage.getItem(TWITCH_USERNAME_STORAGE_KEY);
+      if (storedUsername) {
+        setTwitchUsername(storedUsername);
+      }
+
+      const storedToken = localStorage.getItem(TWITCH_TOKEN_STORAGE_KEY);
+      if (storedToken) {
+        setTwitchOauthToken(storedToken);
+      }
+
+      const storedShadowbannedUsers = localStorage.getItem(TWITCH_SHADOWBANNED_USERS_STORAGE_KEY);
+      if (storedShadowbannedUsers) {
+        setShadowbannedUsers(storedShadowbannedUsers);
+      }
+
+      const storedBlacklistedSongs = localStorage.getItem(TWITCH_BLACKLISTED_SONGS_STORAGE_KEY);
+      if (storedBlacklistedSongs) {
+        setBlacklistedSongs(storedBlacklistedSongs);
+      }
     } catch {
       // Ignore localStorage failures.
     }
+  }, []);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(TWITCH_SHADOWBANNED_USERS_STORAGE_KEY, shadowbannedUsers);
+    } catch {
+      // Ignore localStorage failures.
+    }
+  }, [shadowbannedUsers]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(TWITCH_BLACKLISTED_SONGS_STORAGE_KEY, blacklistedSongs);
+    } catch {
+      // Ignore localStorage failures.
+    }
+  }, [blacklistedSongs]);
+
+  useEffect(() => {
+    return () => {
+      if (twitchSocketRef.current && twitchSocketRef.current.readyState <= WebSocket.OPEN) {
+        twitchSocketRef.current.close();
+      }
+    };
   }, []);
 
   useEffect(() => {
@@ -110,8 +177,19 @@ export default function PlaylistShufflerApp() {
     currentIndexRef.current = currentIndex;
   }, [currentIndex]);
 
+  useEffect(() => {
+    nowPlayingRef.current = nowPlaying;
+  }, [nowPlaying]);
+
   const updateMessage = useCallback((text: string, ok = false) => {
     setMessage(text ? { text, ok } : null);
+  }, []);
+
+  const parseListLines = useCallback((input: string): string[] => {
+    return input
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter(Boolean);
   }, []);
 
   const reportNowPlaying = useCallback(
@@ -218,6 +296,7 @@ export default function PlaylistShufflerApp() {
       }
 
       const shuffled = fisherYatesShuffle([...cleaned]);
+      queueRef.current = shuffled;
       setQueue(shuffled);
       setCurrentIndex(0);
       setStatus(`${sourceLabel}: loaded ${cleaned.length} videos. Shuffled + playing.`);
@@ -231,6 +310,304 @@ export default function PlaylistShufflerApp() {
     },
     [playIndex, updateMessage]
   );
+
+  const queueSongRequest = useCallback(
+    (videoId: string, requestedBy: string) => {
+      const requesterKey = (requestedBy || '').trim().toLowerCase();
+      const currentUserCount = requesterKey ? (userRequestCountsRef.current[requesterKey] ?? 0) : 0;
+      if (requesterKey && currentUserCount >= MAX_REQUESTS_PER_USER) {
+        updateMessage(
+          `Request ignored: ${requestedBy} reached the ${MAX_REQUESTS_PER_USER} song limit.`,
+          true
+        );
+        return;
+      }
+
+      const currentQueue = queueRef.current;
+      if (currentQueue.some((item) => item.videoId === videoId)) {
+        updateMessage(`Ignored duplicate request (${videoId}) from ${requestedBy}.`);
+        return;
+      }
+
+      const requestedItem: VideoItem = {
+        videoId,
+        title: `[Request by ${requestedBy}] ${videoId}`
+      };
+
+      const insertIndex = Math.min(Math.max(currentIndexRef.current + 1, 0), currentQueue.length);
+      const nextQueue = [
+        ...currentQueue.slice(0, insertIndex),
+        requestedItem,
+        ...currentQueue.slice(insertIndex)
+      ];
+      queueRef.current = nextQueue;
+      setQueue(nextQueue);
+      setRequestCount((count) => count + 1);
+      if (requesterKey) {
+        userRequestCountsRef.current[requesterKey] = currentUserCount + 1;
+      }
+      setStatus(`Added song request from ${requestedBy}: ${videoId} (up next)`);
+      updateMessage(`Song request queued as next song (${videoId}).`, true);
+
+      if (!currentQueue.length) {
+        setCurrentIndex(0);
+        if (playerRef.current) {
+          playIndex(0);
+        } else {
+          pendingPlayIndexRef.current = 0;
+        }
+        return;
+      }
+
+      try {
+        localStorage.setItem(
+          STORAGE_KEY,
+          JSON.stringify({
+            savedAt: new Date().toISOString(),
+            queue: nextQueue,
+            currentIndex: currentIndexRef.current
+          })
+        );
+      } catch {
+        // Ignore localStorage failures.
+      }
+    },
+    [playIndex, updateMessage]
+  );
+
+  const disconnectTwitchChat = useCallback(() => {
+    const socket = twitchSocketRef.current;
+    if (socket && socket.readyState <= WebSocket.OPEN) {
+      socket.close();
+    }
+    twitchSocketRef.current = null;
+    setTwitchConnected(false);
+    updateMessage('Disconnected from Twitch chat.', true);
+  }, [updateMessage]);
+
+  const sendMessageToTwitchChannel = useCallback(
+    async (channelName: string, text: string) => {
+      const normalizedToken = twitchOauthToken.trim();
+      const accessToken = normalizedToken.toLowerCase().startsWith('oauth:')
+        ? normalizedToken.slice(6)
+        : normalizedToken;
+
+      if (!accessToken) {
+        updateMessage('Cannot send message: missing OAuth token.');
+        return;
+      }
+
+      try {
+        const validateResponse = await fetch('https://id.twitch.tv/oauth2/validate', {
+          headers: {
+            Authorization: `OAuth ${accessToken}`
+          }
+        });
+
+        if (!validateResponse.ok) {
+          throw new Error('Token validation failed. Re-authenticate Twitch and try again.');
+        }
+
+        const validation = (await validateResponse.json()) as {
+          client_id?: string;
+          user_id?: string;
+          login?: string;
+          scopes?: string[];
+        };
+
+        if (!validation.client_id || !validation.user_id) {
+          throw new Error('Token is missing required Twitch identity data.');
+        }
+
+        const scopes = validation.scopes || [];
+        if (!scopes.includes('user:write:chat')) {
+          throw new Error('Token missing user:write:chat scope. Re-login with chat write scope.');
+        }
+
+        let broadcasterId = '';
+        if (validation.login?.toLowerCase() === channelName.toLowerCase()) {
+          broadcasterId = validation.user_id;
+        } else {
+          const userLookupResponse = await fetch(
+            `https://api.twitch.tv/helix/users?login=${encodeURIComponent(channelName)}`,
+            {
+              headers: {
+                Authorization: `Bearer ${accessToken}`,
+                'Client-Id': validation.client_id
+              }
+            }
+          );
+
+          if (!userLookupResponse.ok) {
+            throw new Error('Unable to resolve target Twitch channel.');
+          }
+
+          const userLookup = (await userLookupResponse.json()) as {
+            data?: Array<{ id?: string }>;
+          };
+
+          broadcasterId = userLookup.data?.[0]?.id || '';
+          if (!broadcasterId) {
+            throw new Error('Channel not found for chat message send.');
+          }
+        }
+
+        const sendResponse = await fetch('https://api.twitch.tv/helix/chat/messages', {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            'Client-Id': validation.client_id,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            broadcaster_id: broadcasterId,
+            sender_id: validation.user_id,
+            message: text
+          })
+        });
+
+        const sendPayload = (await sendResponse.json()) as {
+          message?: string;
+          data?: Array<{ is_sent?: boolean; drop_reason?: { message?: string } }>;
+        };
+
+        const sent = sendPayload.data?.[0]?.is_sent;
+        if (!sendResponse.ok || !sent) {
+          const dropReason = sendPayload.data?.[0]?.drop_reason?.message;
+          throw new Error(dropReason || sendPayload.message || 'Twitch rejected channel message send.');
+        }
+      } catch (error) {
+        updateMessage(`Could not send channel message: ${String(error)}`);
+      }
+    },
+    [twitchOauthToken, updateMessage]
+  );
+
+  const connectTwitchChat = useCallback(() => {
+    const channel = twitchChannel.trim().replace(/^#/, '').toLowerCase();
+    if (!channel) {
+      updateMessage('Enter a Twitch channel name before connecting.');
+      return;
+    }
+
+    const cleanedUsername = twitchUsername.trim().toLowerCase();
+    const normalizedToken = twitchOauthToken.trim();
+    const shadowbannedUsersSet = new Set(parseListLines(shadowbannedUsers).map((user) => user.toLowerCase()));
+    const blacklistedVideoIds = new Set(
+      parseListLines(blacklistedSongs)
+        .map((line) => extractVideoIdFromLine(line) || line)
+        .map((value) => value.trim())
+        .filter(Boolean)
+    );
+
+    const hasOauth = normalizedToken.toLowerCase().startsWith('oauth:');
+    const anonymousNick = `justinfan${Math.floor(100000 + Math.random() * 900000)}`;
+    const nick = cleanedUsername || anonymousNick;
+    const pass = hasOauth ? normalizedToken : 'SCHMOOPIIE';
+
+    if (twitchSocketRef.current && twitchSocketRef.current.readyState <= WebSocket.OPEN) {
+      disconnectTwitchChat();
+    }
+
+    try {
+      localStorage.setItem(TWITCH_CHANNEL_STORAGE_KEY, channel);
+      localStorage.setItem(TWITCH_USERNAME_STORAGE_KEY, cleanedUsername);
+      localStorage.setItem(TWITCH_TOKEN_STORAGE_KEY, normalizedToken);
+    } catch {
+      // Ignore localStorage failures.
+    }
+
+    const socket = new WebSocket('wss://irc-ws.chat.twitch.tv:443');
+    twitchSocketRef.current = socket;
+
+    socket.onopen = () => {
+      socket.send('CAP REQ :twitch.tv/tags twitch.tv/commands twitch.tv/membership');
+      socket.send(`PASS ${pass}`);
+      socket.send(`NICK ${nick}`);
+      socket.send(`JOIN #${channel}`);
+      setTwitchConnected(true);
+      setStatus(`Connected to Twitch chat: #${channel}`);
+      updateMessage(
+        hasOauth
+          ? `Listening for !sr and !currentsong in #${channel}`
+          : `Listening for !sr in #${channel} (anonymous mode: replies disabled)`,
+        true
+      );
+    };
+
+    socket.onmessage = (event) => {
+      const raw = String(event.data || '');
+      const lines = raw.split(/\r?\n/).filter(Boolean);
+      for (const line of lines) {
+        if (line.startsWith('PING')) {
+          socket.send(`PONG ${line.slice(5)}`);
+          continue;
+        }
+
+        if (line.includes(' NOTICE ')) {
+          const notice = line.split(' :')[1] || line;
+          updateMessage(`Twitch notice: ${notice}`);
+          continue;
+        }
+
+        const chatMessage = extractChatMessageFromIrcLine(line);
+        if (!chatMessage) {
+          continue;
+        }
+
+        if (/^!currentsong\b/i.test(chatMessage.text.trim())) {
+          const currentSong = nowPlayingRef.current;
+          const title = currentSong.title || '(nothing)';
+          const videoId = currentSong.videoId;
+          const response = videoId
+            ? `Now playing: ${title} https://youtu.be/${videoId}`
+            : `Now playing: ${title}`;
+          void sendMessageToTwitchChannel(channel, response);
+          continue;
+        }
+
+        const requestedVideoId = extractRequestedVideoId(chatMessage.text);
+        if (!requestedVideoId) {
+          continue;
+        }
+
+        const requester = (chatMessage.username || '').trim().toLowerCase();
+        if (requester && shadowbannedUsersSet.has(requester)) {
+          continue;
+        }
+
+        if (blacklistedVideoIds.has(requestedVideoId)) {
+          updateMessage(`Blocked blacklisted song request (${requestedVideoId}) from ${chatMessage.username}.`);
+          continue;
+        }
+
+        queueSongRequest(requestedVideoId, chatMessage.username);
+      }
+    };
+
+    socket.onerror = () => {
+      setTwitchConnected(false);
+      updateMessage('Twitch chat connection error. Verify channel/login/token and retry.');
+    };
+
+    socket.onclose = () => {
+      setTwitchConnected(false);
+      if (twitchSocketRef.current === socket) {
+        twitchSocketRef.current = null;
+      }
+    };
+  }, [
+    disconnectTwitchChat,
+    queueSongRequest,
+    twitchChannel,
+    shadowbannedUsers,
+    blacklistedSongs,
+    twitchOauthToken,
+    twitchUsername,
+    sendMessageToTwitchChannel,
+    parseListLines,
+    updateMessage
+  ]);
 
   useEffect(() => {
     if (!playerRef.current || pendingPlayIndexRef.current === null || !queue.length) {
@@ -433,6 +810,7 @@ export default function PlaylistShufflerApp() {
     updateMessage('Cleared.', true);
     setNowPlaying({ title: '(nothing)', videoId: '' });
     pendingPlayIndexRef.current = null;
+    userRequestCountsRef.current = {};
 
     try {
       localStorage.removeItem(STORAGE_KEY);
@@ -485,6 +863,23 @@ export default function PlaylistShufflerApp() {
         currentIndex={currentIndex}
         onPlayIndex={playIndex}
       />
+
+      <SimpleGrid cols={{ base: 1, md: 2 }} spacing="md" mt="md">
+        <TwitchRequestCard
+          channel={twitchChannel}
+          oauthToken={twitchOauthToken}
+          shadowbannedUsers={shadowbannedUsers}
+          blacklistedSongs={blacklistedSongs}
+          connected={twitchConnected}
+          requestCount={requestCount}
+          onChannelChange={setTwitchChannel}
+          onOauthTokenChange={setTwitchOauthToken}
+          onShadowbannedUsersChange={setShadowbannedUsers}
+          onBlacklistedSongsChange={setBlacklistedSongs}
+          onConnect={connectTwitchChat}
+          onDisconnect={disconnectTwitchChat}
+        />
+      </SimpleGrid>
 
       <NowPlayingOutputCard
         nowPlayingFolder={nowPlayingFolder}

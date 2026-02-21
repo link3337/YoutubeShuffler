@@ -10,7 +10,8 @@ export default function Header() {
           </Title>
           <Text c="dimmed">
             Import <b>yt-dlp</b> playlist dumps (recommended), YouTube playlist page source HTML
-            (best-effort), or paste video IDs manually. Then shuffle + autoplay locally.
+            (best-effort), paste video IDs manually, or add requests from Twitch chat. Then shuffle
+            + autoplay locally.
           </Text>
         </div>
       </Group>
