@@ -2,10 +2,10 @@ import { Group, Paper, Text, Title } from '@mantine/core';
 
 export default function Header() {
   return (
-    <Paper withBorder radius="xl" p="lg" className="hero-panel">
+    <Paper withBorder radius="xl" p="lg" className="panel">
       <Group justify="space-between" align="flex-start" gap="md" wrap="wrap">
         <div>
-          <Title order={1} mb={6} className="hero-title">
+          <Title order={1} mb={6} className="title">
             YouTube Playlist Shuffler
           </Title>
           <Text c="dimmed">

@@ -9,13 +9,13 @@ body {
     var(--mantine-color-body);
 }
 
-.hero-panel {
+.panel {
   backdrop-filter: blur(8px);
   background: color-mix(in srgb, var(--mantine-color-body) 86%, transparent);
   box-shadow: 0 18px 42px rgba(0, 0, 0, 0.15);
 }
 
-.hero-title {
+.title {
   letter-spacing: -0.02em;
 }
 
