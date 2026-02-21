@@ -1,0 +1,645 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>YouTube Playlist Shuffler (Local, No API Key)</title>
+    <style>
+      body {
+        font-family:
+          system-ui,
+          -apple-system,
+          Segoe UI,
+          Roboto,
+          sans-serif;
+        margin: 16px;
+        max-width: 1200px;
+      }
+
+      .row {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+        align-items: end;
+      }
+
+      label {
+        display: block;
+        font-size: 12px;
+        opacity: 0.8;
+        margin-bottom: 6px;
+      }
+
+      input,
+      textarea,
+      button {
+        font: inherit;
+        padding: 10px;
+      }
+
+      input,
+      textarea {
+        width: 460px;
+        max-width: 100%;
+      }
+
+      textarea {
+        height: 92px;
+      }
+
+      button {
+        cursor: pointer;
+      }
+
+      #playerWrap {
+        margin-top: 16px;
+        display: grid;
+        grid-template-columns: 1fr 460px;
+        gap: 16px;
+      }
+
+      #player {
+        aspect-ratio: 16/9;
+        width: 100%;
+        background: #111;
+        border-radius: 12px;
+        overflow: hidden;
+      }
+
+      #list {
+        border: 1px solid #ddd;
+        border-radius: 12px;
+        padding: 8px;
+        height: 520px;
+        overflow: auto;
+      }
+
+      .muted {
+        opacity: 0.75;
+      }
+
+      .pill {
+        display: inline-block;
+        padding: 2px 8px;
+        border: 1px solid #ddd;
+        border-radius: 999px;
+        font-size: 12px;
+        margin-left: 6px;
+      }
+
+      .now {
+        background: #f5f5ff;
+      }
+
+      .err {
+        color: #b00020;
+        white-space: pre-wrap;
+      }
+
+      .ok {
+        color: #0a7a2f;
+        white-space: pre-wrap;
+      }
+
+      .small {
+        font-size: 12px;
+      }
+
+      .btnbar {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+
+      .card {
+        border: 1px solid #eee;
+        border-radius: 12px;
+        padding: 12px;
+      }
+
+      code {
+        background: #f6f6f6;
+        padding: 1px 6px;
+        border-radius: 6px;
+      }
+
+      .np {
+        font-size: 14px;
+      }
+
+      .np b {
+        font-weight: 650;
+      }
+    </style>
+  </head>
+
+  <body>
+    <h1>YouTube Playlist Shuffler (Local, No API Key)</h1>
+    <p class="muted">
+      Import <b>yt-dlp</b> playlist dumps (recommended), YouTube playlist page source HTML
+      (best-effort), or paste video IDs manually. Then shuffle + autoplay locally.
+    </p>
+
+    <div class="row">
+      <div class="card" style="min-width: 380px">
+        <label>Import</label>
+        <div class="btnbar">
+          <button id="btnImportYtdlp">Import yt-dlp <code>playlist.json</code></button>
+          <button id="btnImportHtml">Import playlist page source <code>.html</code></button>
+        </div>
+        <div class="btnbar" style="margin-top: 10px">
+          <button id="btnNext" disabled>Next</button>
+          <button id="btnReshuffle" disabled>Reshuffle</button>
+          <button id="btnExportQueue" disabled>Export queue JSON</button>
+        </div>
+        <div class="muted small" style="margin-top: 8px">
+          <b>Recommended:</b> generate playlist.json via<br />
+          <code>yt-dlp --flat-playlist -J "PLAYLIST_URL" &gt; playlist.json</code>
+        </div>
+        <div class="muted small" style="margin-top: 8px">
+          <b>Stream “Now Playing”:</b> this page will POST the current title to
+          <code>http://localhost:5510/nowplaying</code> (requires the tiny local server).
+        </div>
+      </div>
+
+      <div class="card">
+        <label>Manual: paste video IDs (or URLs) — one per line</label>
+        <textarea
+          id="manualIds"
+          placeholder="dQw4w9WgXcQ
+https://www.youtube.com/watch?v=J---aiyznGQ
+kJQP7kiw5Fk"
+        ></textarea>
+        <div class="btnbar" style="margin-top: 8px">
+          <button id="btnLoadManual">Load + Shuffle</button>
+          <button id="btnClear">Clear</button>
+        </div>
+        <div class="muted small" style="margin-top: 8px">
+          Accepts <code>watch?v=</code>, <code>youtu.be/</code>, or raw IDs.
+        </div>
+      </div>
+    </div>
+
+    <div id="status" class="muted" style="margin-top: 10px"></div>
+    <div id="message" class="err" style="margin-top: 8px"></div>
+
+    <div class="card" style="margin-top: 12px">
+      <div class="np">Now playing: <b id="nowPlaying">(nothing)</b></div>
+      <div class="muted small" id="nowPlayingMeta" style="margin-top: 6px"></div>
+    </div>
+
+    <div id="playerWrap">
+      <div>
+        <div id="player"></div>
+        <div class="muted small" style="margin-top: 8px">
+          Unplayable/private/region-blocked videos are auto-skipped.
+        </div>
+      </div>
+      <div>
+        <div class="row" style="justify-content: space-between; align-items: center">
+          <div><b>Queue</b> <span id="count" class="pill">0</span></div>
+          <div class="muted small">Click any item to play it</div>
+        </div>
+        <div id="list"></div>
+      </div>
+    </div>
+
+    <input id="fileInputYtdlp" type="file" accept=".json,application/json" style="display: none" />
+    <input id="fileInputHtml" type="file" accept=".html,text/html" style="display: none" />
+
+    <script>
+      // ---------------- utils ----------------
+      function qs(id) {
+        return document.getElementById(id);
+      }
+      function setStatus(t) {
+        qs('status').textContent = t || '';
+      }
+      function setMessage(t, ok = false) {
+        const el = qs('message');
+        el.className = ok ? 'ok' : 'err';
+        el.textContent = t || '';
+      }
+
+      function fisherYatesShuffle(arr) {
+        for (let i = arr.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [arr[i], arr[j]] = [arr[j], arr[i]];
+        }
+        return arr;
+      }
+
+      function uniqBy(arr, keyFn) {
+        const seen = new Set();
+        const out = [];
+        for (const it of arr) {
+          const k = keyFn(it);
+          if (!k || seen.has(k)) continue;
+          seen.add(k);
+          out.push(it);
+        }
+        return out;
+      }
+
+      function extractVideoIdFromLine(line) {
+        const s = (line || '').trim();
+        if (!s) return null;
+
+        if (/^[a-zA-Z0-9_-]{8,}$/.test(s) && !s.includes('http')) return s;
+
+        const m1 = s.match(/[?&]v=([a-zA-Z0-9_-]{8,})/);
+        if (m1) return m1[1];
+
+        const m2 = s.match(/youtu\.be\/([a-zA-Z0-9_-]{8,})/);
+        if (m2) return m2[1];
+
+        const m3 = s.match(/\/embed\/([a-zA-Z0-9_-]{8,})/);
+        if (m3) return m3[1];
+
+        return null;
+      }
+
+      function sanitizeTitleForTextFile(title) {
+        // Keep it OBS-friendly: single line, no weird whitespace
+        return String(title || '')
+          .replace(/\s+/g, ' ')
+          .trim();
+      }
+
+      // ---------------- "Now Playing" text file reporter ----------------
+      // Requires your local server running (server.js) on port 5510.
+      const NOWPLAYING_ENDPOINT = 'http://localhost:5510/nowplaying';
+
+      async function reportNowPlaying({ title, videoId }) {
+        // Write to the UI immediately
+        qs('nowPlaying').textContent = title || '(unknown)';
+        qs('nowPlayingMeta').textContent = videoId ? `Video ID: ${videoId}` : '';
+
+        // Try to write current_song.txt via local server (silently ignore if not running)
+        try {
+          await fetch(NOWPLAYING_ENDPOINT, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              title: sanitizeTitleForTextFile(title),
+              videoId: videoId || '',
+              at: new Date().toISOString()
+            })
+          });
+        } catch {
+          // ignore (server not running / blocked)
+        }
+      }
+
+      // ---------------- player + queue ----------------
+      let player = null;
+      let queue = []; // { videoId, title }
+      let currentIndex = -1;
+
+      function setButtons() {
+        const has = queue.length > 0;
+        qs('btnNext').disabled = !has;
+        qs('btnReshuffle').disabled = !has;
+        qs('btnExportQueue').disabled = !has;
+      }
+
+      function renderQueue() {
+        qs('count').textContent = String(queue.length);
+        const list = qs('list');
+        list.innerHTML = '';
+
+        queue.forEach((v, idx) => {
+          const div = document.createElement('div');
+          div.style.padding = '8px';
+          div.style.borderBottom = '1px solid #eee';
+          div.style.cursor = 'pointer';
+          div.className = idx === currentIndex ? 'now' : '';
+          div.textContent = `${idx + 1}. ${v.title || v.videoId}`;
+          div.title = v.videoId;
+          div.onclick = () => playIndex(idx);
+          list.appendChild(div);
+        });
+
+        setButtons();
+      }
+
+      function playIndex(idx) {
+        if (!player) return;
+        if (idx < 0 || idx >= queue.length) return;
+
+        currentIndex = idx;
+        renderQueue();
+
+        const item = queue[currentIndex];
+        const vid = item.videoId;
+
+        // Update OBS text file (via local server) + UI label
+        reportNowPlaying({ title: item.title || vid, videoId: vid });
+
+        // Play video
+        player.loadVideoById({ videoId: vid });
+
+        // Save session
+        try {
+          localStorage.setItem(
+            'ytpl_last',
+            JSON.stringify({
+              savedAt: new Date().toISOString(),
+              queue,
+              currentIndex
+            })
+          );
+        } catch {}
+      }
+
+      function nextVideo() {
+        if (!queue.length) return;
+        const next = (currentIndex + 1) % queue.length;
+        playIndex(next);
+      }
+
+      function reshuffleKeepCurrent() {
+        if (!queue.length) return;
+        const cur = queue[currentIndex]?.videoId;
+        fisherYatesShuffle(queue);
+        const newIndex = queue.findIndex((x) => x.videoId === cur);
+        currentIndex = newIndex >= 0 ? newIndex : 0;
+        renderQueue();
+        setMessage('Reshuffled.', true);
+      }
+
+      function setQueue(items, sourceLabel) {
+        const cleaned = uniqBy(items, (x) => x.videoId);
+        if (!cleaned.length) throw new Error('No playable items found.');
+
+        queue = fisherYatesShuffle(cleaned);
+        currentIndex = 0;
+        renderQueue();
+        playIndex(0);
+
+        setStatus(`${sourceLabel}: loaded ${cleaned.length} videos. Shuffled + playing.`);
+        setMessage('Loaded successfully.', true);
+      }
+
+      // ---------------- yt-dlp json import ----------------
+      function parseYtDlpJson(text) {
+        const data = JSON.parse(text);
+
+        if (!data || !Array.isArray(data.entries)) {
+          throw new Error("This doesn't look like yt-dlp -J playlist JSON (missing entries[]).");
+        }
+
+        const items = [];
+        for (const e of data.entries) {
+          if (!e) continue;
+          const id = e.id || e.url;
+          if (!id || typeof id !== 'string') continue;
+
+          items.push({
+            videoId: id,
+            title: e.title || id
+          });
+        }
+
+        if (!items.length) throw new Error('No items found in yt-dlp JSON.');
+        return items;
+      }
+
+      // ---------------- HTML page source import (best-effort) ----------------
+      function extractYtInitialData(htmlText) {
+        const patterns = [
+          /var\s+ytInitialData\s*=\s*(\{.*?\});\s*<\/script>/s,
+          /window\["ytInitialData"\]\s*=\s*(\{.*?\});\s*<\/script>/s
+        ];
+        for (const re of patterns) {
+          const m = htmlText.match(re);
+          if (!m) continue;
+          try {
+            return JSON.parse(m[1]);
+          } catch {}
+        }
+
+        const idx = htmlText.search(/ytInitialData/);
+        if (idx < 0) return null;
+        const start = htmlText.indexOf('{', idx);
+        if (start < 0) return null;
+
+        let depth = 0;
+        for (let i = start; i < htmlText.length; i++) {
+          const ch = htmlText[i];
+          if (ch === '{') depth++;
+          else if (ch === '}') depth--;
+          if (depth === 0) {
+            const candidate = htmlText.slice(start, i + 1);
+            try {
+              return JSON.parse(candidate);
+            } catch {
+              return null;
+            }
+          }
+        }
+        return null;
+      }
+
+      function collectVideoIdTitlePairs(obj) {
+        const out = [];
+        const stack = [obj];
+        while (stack.length) {
+          const cur = stack.pop();
+          if (!cur) continue;
+
+          if (Array.isArray(cur)) {
+            for (const it of cur) stack.push(it);
+            continue;
+          }
+          if (typeof cur !== 'object') continue;
+
+          if (cur.playlistVideoRenderer?.videoId) {
+            const r = cur.playlistVideoRenderer;
+            const videoId = r.videoId;
+            const title =
+              r.title?.simpleText ||
+              (Array.isArray(r.title?.runs) ? r.title.runs.map((x) => x.text).join('') : null) ||
+              null;
+
+            out.push({ videoId, title: title || videoId });
+          }
+
+          for (const k of Object.keys(cur)) stack.push(cur[k]);
+        }
+
+        return uniqBy(out, (x) => x.videoId);
+      }
+
+      async function parsePlaylistHtml(text) {
+        const data = extractYtInitialData(text);
+        if (data) {
+          const pairs = collectVideoIdTitlePairs(data);
+          if (pairs.length) return pairs;
+        }
+
+        const ids = uniqBy(
+          [...text.matchAll(/"videoId":"([a-zA-Z0-9_-]{8,})"/g)].map((m) => ({
+            videoId: m[1],
+            title: m[1]
+          })),
+          (x) => x.videoId
+        );
+
+        if (!ids.length)
+          throw new Error(
+            "Couldn't find video IDs in that HTML. Make sure it's playlist *page source* (Ctrl+U)."
+          );
+        return ids;
+      }
+
+      // ---------------- export queue ----------------
+      function downloadJson(obj, filename) {
+        const blob = new Blob([JSON.stringify(obj, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+      }
+
+      // ---------------- UI wiring ----------------
+      qs('btnImportYtdlp').onclick = () => qs('fileInputYtdlp').click();
+      qs('btnImportHtml').onclick = () => qs('fileInputHtml').click();
+
+      qs('fileInputYtdlp').addEventListener('change', async (ev) => {
+        const file = ev.target.files?.[0];
+        ev.target.value = '';
+        if (!file) return;
+
+        try {
+          setMessage('');
+          setStatus('Reading yt-dlp JSON...');
+          const text = await file.text();
+          const items = parseYtDlpJson(text);
+          setQueue(items, 'yt-dlp import');
+        } catch (e) {
+          setStatus('');
+          setMessage(String(e.message || e));
+        }
+      });
+
+      qs('fileInputHtml').addEventListener('change', async (ev) => {
+        const file = ev.target.files?.[0];
+        ev.target.value = '';
+        if (!file) return;
+
+        try {
+          setMessage('');
+          setStatus('Reading playlist HTML...');
+          const text = await file.text();
+          const items = await parsePlaylistHtml(text);
+          setQueue(items, 'HTML import (best-effort)');
+        } catch (e) {
+          setStatus('');
+          setMessage(String(e.message || e));
+        }
+      });
+
+      qs('btnLoadManual').onclick = () => {
+        try {
+          setMessage('');
+          const lines = qs('manualIds')
+            .value.split(/\r?\n/)
+            .map((s) => s.trim())
+            .filter(Boolean);
+          const ids = uniqBy(
+            lines
+              .map(extractVideoIdFromLine)
+              .filter(Boolean)
+              .map((id) => ({ videoId: id, title: id })),
+            (x) => x.videoId
+          );
+          if (!ids.length) throw new Error('Paste at least one video ID or YouTube URL.');
+          setQueue(ids, 'Manual IDs');
+        } catch (e) {
+          setStatus('');
+          setMessage(String(e.message || e));
+        }
+      };
+
+      qs('btnClear').onclick = () => {
+        qs('manualIds').value = '';
+        queue = [];
+        currentIndex = -1;
+        renderQueue();
+        setStatus('');
+        setMessage('Cleared.', true);
+        try {
+          localStorage.removeItem('ytpl_last');
+        } catch {}
+        qs('nowPlaying').textContent = '(nothing)';
+        qs('nowPlayingMeta').textContent = '';
+      };
+
+      qs('btnNext').onclick = nextVideo;
+      qs('btnReshuffle').onclick = reshuffleKeepCurrent;
+
+      qs('btnExportQueue').onclick = () => {
+        if (!queue.length) return;
+        const payload = {
+          kind: 'ytpl-queue',
+          createdAt: new Date().toISOString(),
+          currentIndex,
+          items: queue
+        };
+        downloadJson(payload, `queue-${new Date().toISOString().replace(/[:.]/g, '-')}.json`);
+        setMessage('Exported queue JSON.', true);
+      };
+
+      // ---------------- YouTube IFrame API ----------------
+      window.onYouTubeIframeAPIReady = function () {
+        player = new YT.Player('player', {
+          videoId: '',
+          playerVars: { autoplay: 1, controls: 1, rel: 0 },
+          events: {
+            onStateChange: (ev) => {
+              if (ev.data === YT.PlayerState.ENDED) nextVideo();
+            },
+            onError: () => {
+              nextVideo();
+            }
+          }
+        });
+
+        // Restore last session if available
+        try {
+          const raw = localStorage.getItem('ytpl_last');
+          if (raw) {
+            const saved = JSON.parse(raw);
+            if (saved && Array.isArray(saved.queue) && saved.queue.length) {
+              queue = saved.queue;
+              currentIndex = Math.min(Math.max(saved.currentIndex ?? 0, 0), queue.length - 1);
+              renderQueue();
+              // This will also reportNowPlaying to your server:
+              playIndex(currentIndex);
+              setStatus(`Restored last session (${queue.length} videos).`);
+              setMessage('Restored from last session.', true);
+            } else {
+              setStatus('Ready. Import yt-dlp playlist.json to start.');
+            }
+          } else {
+            setStatus('Ready. Import yt-dlp playlist.json to start.');
+          }
+        } catch {
+          setStatus('Ready. Import yt-dlp playlist.json to start.');
+        }
+      };
+
+      (function init() {
+        renderQueue();
+        const tag = document.createElement('script');
+        tag.src = 'https://www.youtube.com/iframe_api';
+        document.head.appendChild(tag);
+      })();
+    </script>
+  </body>
+</html>
