@@ -9,8 +9,6 @@ fn write_now_playing(title: String, path: Option<String>) -> Result<(), String> 
     let out_path: PathBuf = if let Some(p) = path {
         PathBuf::from(p)
     } else {
-        // Default: next to the executable / app working directory
-        // You can change this to a fixed folder if you prefer.
         PathBuf::from("current_song.txt")
     };
 
