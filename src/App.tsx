@@ -2,7 +2,6 @@ import {
   AppShell,
   Button,
   Container,
-  Group,
   Stack,
   useComputedColorScheme,
   useMantineColorScheme
@@ -10,6 +9,7 @@ import {
 import { IconHome, IconSettings } from '@tabler/icons-react';
 import { Link, useLocation } from 'react-router-dom';
 import AppRoutes from './components/AppRoutes';
+import Footer from './components/layout/Footer';
 
 function App() {
   const { setColorScheme } = useMantineColorScheme();
@@ -17,19 +17,17 @@ function App() {
 
   const location = useLocation();
   const isHomeRoute = location.pathname.toLowerCase() === '/home';
-  const isSettingsRoute = location.pathname.toLowerCase() === '/settings';
-  const showMobileFooterNav = isHomeRoute || isSettingsRoute;
 
   return (
     <AppShell
       navbar={{
         width: 72,
         breakpoint: 'sm',
-        collapsed: { mobile: showMobileFooterNav }
+        collapsed: { mobile: false }
       }}
       footer={{
-        height: 58,
-        collapsed: !showMobileFooterNav
+        height: 96,
+        collapsed: false
       }}
     >
       <AppShell.Navbar p="xs">
@@ -56,24 +54,7 @@ function App() {
       </AppShell.Navbar>
 
       <AppShell.Footer p="xs">
-        <Group grow wrap="nowrap">
-          <Button
-            component={Link}
-            to="/home"
-            variant={isHomeRoute ? 'light' : 'subtle'}
-            aria-label="Home"
-          >
-            <IconHome size={18} />
-          </Button>
-          <Button
-            component={Link}
-            to="/settings"
-            variant={!isHomeRoute ? 'light' : 'subtle'}
-            aria-label="Settings"
-          >
-            <IconSettings size={18} />
-          </Button>
-        </Group>
+        <Footer />
       </AppShell.Footer>
 
       <AppShell.Main>

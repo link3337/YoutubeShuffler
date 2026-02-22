@@ -3,10 +3,6 @@ import { useTwitchStore } from '../../stores/twitchStore';
 import { extractVideoIdFromLine } from '../../utils/playlist';
 import { extractChatMessageFromIrcLine, extractRequestedVideoId } from '../../utils/twitch';
 
-const TWITCH_CHANNEL_STORAGE_KEY = 'ytpl_twitch_channel';
-const TWITCH_USERNAME_STORAGE_KEY = 'ytpl_twitch_username';
-const TWITCH_TOKEN_STORAGE_KEY = 'ytpl_twitch_token';
-
 type UseTwitchRequestsArgs = {
     updateMessage: (text: string, ok?: boolean) => void;
     setStatus: (text: string) => void;
@@ -188,14 +184,6 @@ export function useTwitchRequests({
 
         if (twitchSocketRef.current && twitchSocketRef.current.readyState <= WebSocket.OPEN) {
             disconnectTwitchChat();
-        }
-
-        try {
-            localStorage.setItem(TWITCH_CHANNEL_STORAGE_KEY, channel);
-            localStorage.setItem(TWITCH_USERNAME_STORAGE_KEY, cleanedUsername);
-            localStorage.setItem(TWITCH_TOKEN_STORAGE_KEY, normalizedToken);
-        } catch {
-            // Ignore localStorage failures.
         }
 
         const socket = new WebSocket('wss://irc-ws.chat.twitch.tv:443');
