@@ -64,7 +64,7 @@ body {
   display: none;
 }
 
-/* @media (max-width: 768px) {
+@media (max-width: 768px) {
   .app {
     max-width: 100%;
   }
@@ -84,4 +84,4 @@ body {
   .queue-item {
     padding: 10px;
   }
-} */
+}

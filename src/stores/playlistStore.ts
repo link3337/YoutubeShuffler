@@ -10,11 +10,21 @@ const DEFAULT_NOW_PLAYING: NowPlaying = {
 };
 const STORAGE_KEY = 'ytpl_last';
 const NOW_PLAYING_FOLDER_STORAGE_KEY = 'ytpl_now_playing_folder';
+const LOOP_CURRENT_SONG_STORAGE_KEY = 'ytpl_loop_current_song';
+
+const readLoopCurrentSongPreference = (): boolean => {
+    try {
+        return localStorage.getItem(LOOP_CURRENT_SONG_STORAGE_KEY) === 'true';
+    } catch {
+        return false;
+    }
+};
 
 type PlaylistStoreState = {
     manualInput: string;
     queue: VideoItem[];
     currentIndex: number;
+    loopCurrentSong: boolean;
     status: string;
     message: MessageState | null;
     nowPlaying: NowPlaying;
@@ -22,6 +32,7 @@ type PlaylistStoreState = {
     setManualInput: (value: string) => void;
     setQueue: (value: VideoItem[]) => void;
     setCurrentIndex: (value: number) => void;
+    setLoopCurrentSong: (value: boolean) => void;
     setStatus: (value: string) => void;
     updateMessage: (text: string, ok?: boolean) => void;
     setNowPlaying: (value: NowPlaying) => void;
@@ -39,6 +50,7 @@ export const usePlaylistStore = create<PlaylistStoreState>()((set) => ({
     manualInput: '',
     queue: [],
     currentIndex: -1,
+    loopCurrentSong: readLoopCurrentSongPreference(),
     status: '',
     message: null,
     nowPlaying: DEFAULT_NOW_PLAYING,
@@ -46,6 +58,14 @@ export const usePlaylistStore = create<PlaylistStoreState>()((set) => ({
     setManualInput: (value) => set({ manualInput: value }),
     setQueue: (value) => set({ queue: value }),
     setCurrentIndex: (value) => set({ currentIndex: value }),
+    setLoopCurrentSong: (value) => {
+        set({ loopCurrentSong: value });
+        try {
+            localStorage.setItem(LOOP_CURRENT_SONG_STORAGE_KEY, String(value));
+        } catch {
+            // Ignore localStorage failures.
+        }
+    },
     setStatus: (value) => set({ status: value }),
     updateMessage: (text, ok = false) => set({ message: text ? { text, ok } : null }),
     setNowPlaying: (value) => set({ nowPlaying: value }),
@@ -124,12 +144,21 @@ export const usePlaylistStore = create<PlaylistStoreState>()((set) => ({
         }
     },
     resetPlaylistState: () =>
-        set({
-            manualInput: '',
-            queue: [],
-            currentIndex: -1,
-            status: '',
-            message: null,
-            nowPlaying: DEFAULT_NOW_PLAYING
-        })
+        ((): void => {
+            try {
+                localStorage.setItem(LOOP_CURRENT_SONG_STORAGE_KEY, 'false');
+            } catch {
+                // Ignore localStorage failures.
+            }
+
+            set({
+                manualInput: '',
+                queue: [],
+                currentIndex: -1,
+                loopCurrentSong: false,
+                status: '',
+                message: null,
+                nowPlaying: DEFAULT_NOW_PLAYING
+            });
+        })()
 }));

@@ -15,8 +15,8 @@
         "title": "Youtube Playlist Shuffler",
         "width": 1280,
         "height": 720,
-        "minWidth": 800,
-        "minHeight": 600,
+        "minWidth": 770,
+        "minHeight": 500,
         "resizable": true
       }
     ],

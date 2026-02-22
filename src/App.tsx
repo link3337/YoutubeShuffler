@@ -6,6 +6,7 @@ import {
   useComputedColorScheme,
   useMantineColorScheme
 } from '@mantine/core';
+import { useViewportSize } from '@mantine/hooks';
 import { IconHome, IconSettings } from '@tabler/icons-react';
 import { Link, useLocation } from 'react-router-dom';
 import AppRoutes from './components/AppRoutes';
@@ -14,9 +15,11 @@ import Footer from './components/layout/Footer';
 function App() {
   const { setColorScheme } = useMantineColorScheme();
   const computedColorScheme = useComputedColorScheme('dark', { getInitialValueInEffect: true });
+  const { width } = useViewportSize();
 
   const location = useLocation();
   const isHomeRoute = location.pathname.toLowerCase() === '/home';
+  const footerHeight = width < 1100 ? 72 : width < 1500 ? 80 : 88;
 
   return (
     <AppShell
@@ -26,7 +29,7 @@ function App() {
         collapsed: { mobile: false }
       }}
       footer={{
-        height: 96,
+        height: footerHeight,
         collapsed: false
       }}
     >

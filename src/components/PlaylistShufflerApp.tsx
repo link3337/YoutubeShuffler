@@ -64,6 +64,8 @@ export type PlaylistShufflerOutletContext = {
   setManualInput: (value: string) => void;
   queue: VideoItem[];
   currentIndex: number;
+  loopCurrentSong: boolean;
+  setLoopCurrentSong: (value: boolean) => void;
   status: string;
   message: MessageState | null;
   nowPlaying: { title: string; videoId: string };
@@ -100,6 +102,8 @@ export default function PlaylistShufflerApp({
   const setQueue = usePlaylistStore((state) => state.setQueue);
   const currentIndex = usePlaylistStore((state) => state.currentIndex);
   const setCurrentIndex = usePlaylistStore((state) => state.setCurrentIndex);
+  const loopCurrentSong = usePlaylistStore((state) => state.loopCurrentSong);
+  const setLoopCurrentSong = usePlaylistStore((state) => state.setLoopCurrentSong);
   const status = usePlaylistStore((state) => state.status);
   const setStatus = usePlaylistStore((state) => state.setStatus);
   const message = usePlaylistStore((state) => state.message);
@@ -126,6 +130,7 @@ export default function PlaylistShufflerApp({
   const playerContainerRef = useRef<HTMLDivElement | null>(null);
   const pendingPlayIndexRef = useRef<number | null>(null);
   const nowPlayingRef = useRef(nowPlaying);
+  const loopCurrentSongRef = useRef(loopCurrentSong);
   const userRequestCountsRef = useRef<Record<string, number>>({});
 
   const fileInputYtdlpRef = useRef<HTMLInputElement | null>(null);
@@ -159,6 +164,10 @@ export default function PlaylistShufflerApp({
   useEffect(() => {
     nowPlayingRef.current = nowPlaying;
   }, [nowPlaying]);
+
+  useEffect(() => {
+    loopCurrentSongRef.current = loopCurrentSong;
+  }, [loopCurrentSong]);
 
   const reportNowPlaying = useCallback(
     async (item: { title: string; videoId: string }) => {
@@ -372,10 +381,15 @@ export default function PlaylistShufflerApp({
           },
           onStateChange: (event) => {
             if (event.data === window.YT?.PlayerState.ENDED) {
+              if (loopCurrentSongRef.current && currentIndexRef.current >= 0) {
+                playIndex(currentIndexRef.current);
+                return;
+              }
               nextVideo();
             }
           },
           onError: () => {
+            console.log('Error playing video, skipping to next.');
             nextVideo();
           }
         }
@@ -545,6 +559,8 @@ export default function PlaylistShufflerApp({
     setManualInput,
     queue,
     currentIndex,
+    loopCurrentSong,
+    setLoopCurrentSong,
     status,
     message,
     nowPlaying,

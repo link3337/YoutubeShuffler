@@ -2,22 +2,26 @@ import { Button, Card, Code, Group, Stack, Text } from '@mantine/core';
 
 type ImportCardProps = {
   hasQueue: boolean;
+  loopCurrentSong: boolean;
   onImportYtdlp: () => void;
   onImportHtml: () => void;
   onPrev: () => void;
   onNext: () => void;
   onReshuffle: () => void;
   onExportQueue: () => void;
+  onToggleLoopCurrentSong: () => void;
 };
 
 export function ImportCard({
   hasQueue,
+  loopCurrentSong,
   onImportYtdlp,
   onImportHtml,
   onPrev,
   onNext,
   onReshuffle,
-  onExportQueue
+  onExportQueue,
+  onToggleLoopCurrentSong
 }: ImportCardProps) {
   return (
     <Card withBorder radius="md">
@@ -44,6 +48,13 @@ export function ImportCard({
           </Button>
           <Button onClick={onReshuffle} disabled={!hasQueue}>
             Reshuffle
+          </Button>
+          <Button
+            variant={loopCurrentSong ? 'filled' : 'default'}
+            onClick={onToggleLoopCurrentSong}
+            disabled={!hasQueue}
+          >
+            {loopCurrentSong ? 'Loop current: On' : 'Loop current: Off'}
           </Button>
           <Button onClick={onExportQueue} disabled={!hasQueue}>
             Export queue JSON
