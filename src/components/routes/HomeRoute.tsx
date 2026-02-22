@@ -20,6 +20,7 @@ export default function HomeRoute() {
     playIndex,
     handleImportYtdlp,
     handleImportHtml,
+    previousVideo,
     nextVideo,
     reshuffleKeepCurrent,
     handleExportQueue,
@@ -36,6 +37,7 @@ export default function HomeRoute() {
           hasQueue={queue.length > 0}
           onImportYtdlp={handleImportYtdlp}
           onImportHtml={handleImportHtml}
+          onPrev={previousVideo}
           onNext={nextVideo}
           onReshuffle={reshuffleKeepCurrent}
           onExportQueue={handleExportQueue}

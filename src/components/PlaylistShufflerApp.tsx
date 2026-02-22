@@ -75,6 +75,7 @@ export type PlaylistShufflerOutletContext = {
   playIndex: (index: number) => void;
   handleImportYtdlp: () => void;
   handleImportHtml: () => void;
+  previousVideo: () => void;
   nextVideo: () => void;
   reshuffleKeepCurrent: () => void;
   handleExportQueue: () => void;
@@ -310,6 +311,16 @@ export default function PlaylistShufflerApp({
     }
     const next = (currentIndexRef.current + 1) % currentQueue.length;
     playIndex(next);
+  }, [playIndex]);
+
+  const previousVideo = useCallback(() => {
+    const currentQueue = queueRef.current;
+    if (!currentQueue.length) {
+      return;
+    }
+
+    const prev = (currentIndexRef.current - 1 + currentQueue.length) % currentQueue.length;
+    playIndex(prev);
   }, [playIndex]);
 
   const reshuffleKeepCurrent = useCallback(() => {
@@ -892,6 +903,7 @@ export default function PlaylistShufflerApp({
     playIndex,
     handleImportYtdlp,
     handleImportHtml,
+    previousVideo,
     nextVideo,
     reshuffleKeepCurrent,
     handleExportQueue,

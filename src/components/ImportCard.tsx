@@ -4,6 +4,7 @@ type ImportCardProps = {
   hasQueue: boolean;
   onImportYtdlp: () => void;
   onImportHtml: () => void;
+  onPrev: () => void;
   onNext: () => void;
   onReshuffle: () => void;
   onExportQueue: () => void;
@@ -13,6 +14,7 @@ export function ImportCard({
   hasQueue,
   onImportYtdlp,
   onImportHtml,
+  onPrev,
   onNext,
   onReshuffle,
   onExportQueue
@@ -34,6 +36,9 @@ export function ImportCard({
         </Group>
 
         <Group gap="xs" wrap="wrap">
+          <Button onClick={onPrev} disabled={!hasQueue}>
+            Prev
+          </Button>
           <Button onClick={onNext} disabled={!hasQueue}>
             Next
           </Button>
