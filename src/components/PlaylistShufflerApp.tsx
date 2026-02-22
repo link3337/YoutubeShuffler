@@ -1,7 +1,7 @@
-import { SimpleGrid } from '@mantine/core';
 import { invoke } from '@tauri-apps/api/core';
 import { open } from '@tauri-apps/plugin-dialog';
 import { useCallback, useEffect, useRef, useState, type ChangeEvent } from 'react';
+import { Outlet } from 'react-router-dom';
 import '../App.css';
 import type { MessageState, VideoItem } from '../types';
 import {
@@ -14,12 +14,6 @@ import {
   uniqueBy
 } from '../utils/playlist';
 import { extractChatMessageFromIrcLine, extractRequestedVideoId } from '../utils/twitch';
-import { ImportCard } from './ImportCard';
-import { ManualInputCard } from './ManualInputCard';
-import { NowPlayingOutputCard } from './NowPlayingOutputCard';
-import { PlayerQueueSection } from './PlayerQueueSection';
-import { StatusMessage } from './StatusMessage';
-import { TwitchRequestCard } from './TwitchRequestCard';
 
 const STORAGE_KEY = 'ytpl_last';
 const NOW_PLAYING_FOLDER_STORAGE_KEY = 'ytpl_now_playing_folder';
@@ -64,7 +58,52 @@ declare global {
   }
 }
 
-export default function PlaylistShufflerApp() {
+type PlaylistShufflerAppProps = {
+  isDarkMode: boolean;
+  onToggleTheme: (isDark: boolean) => void;
+};
+
+export type PlaylistShufflerOutletContext = {
+  manualInput: string;
+  setManualInput: (value: string) => void;
+  queue: VideoItem[];
+  currentIndex: number;
+  status: string;
+  message: MessageState | null;
+  nowPlaying: { title: string; videoId: string };
+  playerContainerRef: React.RefObject<HTMLDivElement | null>;
+  playIndex: (index: number) => void;
+  handleImportYtdlp: () => void;
+  handleImportHtml: () => void;
+  nextVideo: () => void;
+  reshuffleKeepCurrent: () => void;
+  handleExportQueue: () => void;
+  handleLoadManual: () => void;
+  handleClear: () => void;
+  isDarkMode: boolean;
+  onToggleTheme: (isDark: boolean) => void;
+  twitchChannel: string;
+  twitchOauthToken: string;
+  shadowbannedUsers: string;
+  blacklistedSongs: string;
+  twitchConnected: boolean;
+  requestCount: number;
+  setTwitchChannel: (value: string) => void;
+  setTwitchOauthToken: (value: string) => void;
+  setShadowbannedUsers: (value: string) => void;
+  setBlacklistedSongs: (value: string) => void;
+  connectTwitchChat: () => void;
+  disconnectTwitchChat: () => void;
+  nowPlayingFolder: string;
+  nowPlayingFilePath: string;
+  handleChooseNowPlayingFolder: () => void;
+  handleClearNowPlayingFolder: () => void;
+};
+
+export default function PlaylistShufflerApp({
+  isDarkMode,
+  onToggleTheme
+}: PlaylistShufflerAppProps) {
   const [manualInput, setManualInput] = useState('');
   const [queue, setQueue] = useState<VideoItem[]>([]);
   const [currentIndex, setCurrentIndex] = useState(-1);
@@ -474,7 +513,9 @@ export default function PlaylistShufflerApp() {
         const sent = sendPayload.data?.[0]?.is_sent;
         if (!sendResponse.ok || !sent) {
           const dropReason = sendPayload.data?.[0]?.drop_reason?.message;
-          throw new Error(dropReason || sendPayload.message || 'Twitch rejected channel message send.');
+          throw new Error(
+            dropReason || sendPayload.message || 'Twitch rejected channel message send.'
+          );
         }
       } catch (error) {
         updateMessage(`Could not send channel message: ${String(error)}`);
@@ -492,7 +533,9 @@ export default function PlaylistShufflerApp() {
 
     const cleanedUsername = twitchUsername.trim().toLowerCase();
     const normalizedToken = twitchOauthToken.trim();
-    const shadowbannedUsersSet = new Set(parseListLines(shadowbannedUsers).map((user) => user.toLowerCase()));
+    const shadowbannedUsersSet = new Set(
+      parseListLines(shadowbannedUsers).map((user) => user.toLowerCase())
+    );
     const blacklistedVideoIds = new Set(
       parseListLines(blacklistedSongs)
         .map((line) => extractVideoIdFromLine(line) || line)
@@ -577,7 +620,9 @@ export default function PlaylistShufflerApp() {
         }
 
         if (blacklistedVideoIds.has(requestedVideoId)) {
-          updateMessage(`Blocked blacklisted song request (${requestedVideoId}) from ${chatMessage.username}.`);
+          updateMessage(
+            `Blocked blacklisted song request (${requestedVideoId}) from ${chatMessage.username}.`
+          );
           continue;
         }
 
@@ -835,58 +880,46 @@ export default function PlaylistShufflerApp() {
     updateMessage('Exported queue JSON.', true);
   }, [currentIndex, queue, updateMessage]);
 
+  const outletContext: PlaylistShufflerOutletContext = {
+    manualInput,
+    setManualInput,
+    queue,
+    currentIndex,
+    status,
+    message,
+    nowPlaying,
+    playerContainerRef,
+    playIndex,
+    handleImportYtdlp,
+    handleImportHtml,
+    nextVideo,
+    reshuffleKeepCurrent,
+    handleExportQueue,
+    handleLoadManual,
+    handleClear,
+    isDarkMode,
+    onToggleTheme,
+    twitchChannel,
+    twitchOauthToken,
+    shadowbannedUsers,
+    blacklistedSongs,
+    twitchConnected,
+    requestCount,
+    setTwitchChannel,
+    setTwitchOauthToken,
+    setShadowbannedUsers,
+    setBlacklistedSongs,
+    connectTwitchChat,
+    disconnectTwitchChat,
+    nowPlayingFolder,
+    nowPlayingFilePath: resolveNowPlayingPath(nowPlayingFolder),
+    handleChooseNowPlayingFolder,
+    handleClearNowPlayingFolder
+  };
+
   return (
     <>
-      <SimpleGrid cols={{ base: 1, md: 2 }} spacing="md" mt="md">
-        <ImportCard
-          hasQueue={queue.length > 0}
-          onImportYtdlp={handleImportYtdlp}
-          onImportHtml={handleImportHtml}
-          onNext={nextVideo}
-          onReshuffle={reshuffleKeepCurrent}
-          onExportQueue={handleExportQueue}
-        />
-        <ManualInputCard
-          value={manualInput}
-          onChange={setManualInput}
-          onLoad={handleLoadManual}
-          onClear={handleClear}
-        />
-      </SimpleGrid>
-
-      <StatusMessage status={status} message={message} />
-
-      <PlayerQueueSection
-        nowPlaying={nowPlaying}
-        playerRef={playerContainerRef}
-        queue={queue}
-        currentIndex={currentIndex}
-        onPlayIndex={playIndex}
-      />
-
-      <SimpleGrid cols={{ base: 1, md: 2 }} spacing="md" mt="md">
-        <TwitchRequestCard
-          channel={twitchChannel}
-          oauthToken={twitchOauthToken}
-          shadowbannedUsers={shadowbannedUsers}
-          blacklistedSongs={blacklistedSongs}
-          connected={twitchConnected}
-          requestCount={requestCount}
-          onChannelChange={setTwitchChannel}
-          onOauthTokenChange={setTwitchOauthToken}
-          onShadowbannedUsersChange={setShadowbannedUsers}
-          onBlacklistedSongsChange={setBlacklistedSongs}
-          onConnect={connectTwitchChat}
-          onDisconnect={disconnectTwitchChat}
-        />
-      </SimpleGrid>
-
-      <NowPlayingOutputCard
-        nowPlayingFolder={nowPlayingFolder}
-        nowPlayingFilePath={resolveNowPlayingPath(nowPlayingFolder)}
-        onChooseNowPlayingFolder={handleChooseNowPlayingFolder}
-        onClearNowPlayingFolder={handleClearNowPlayingFolder}
-      />
+      <Outlet context={outletContext} />
 
       <div className="hidden-inputs">
         <input
