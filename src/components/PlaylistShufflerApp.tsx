@@ -1,9 +1,10 @@
 import { Box } from '@mantine/core';
 import { invoke } from '@tauri-apps/api/core';
 import { open } from '@tauri-apps/plugin-dialog';
-import { useCallback, useEffect, useRef, useState, type ChangeEvent } from 'react';
+import { useCallback, useEffect, useRef, type ChangeEvent } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import '../App.css';
+import { usePlaylistStore } from '../stores/playlistStore';
 import type { MessageState, VideoItem } from '../types';
 import {
   downloadJson,
@@ -17,8 +18,6 @@ import {
 import { useTwitchRequests } from './hooks/useTwitchRequests';
 import { PlayerQueueSection } from './PlayerQueueSection';
 
-const STORAGE_KEY = 'ytpl_last';
-const NOW_PLAYING_FOLDER_STORAGE_KEY = 'ytpl_now_playing_folder';
 const NOW_PLAYING_FILE_NAME = 'current_song.txt';
 const MAX_REQUESTS_PER_USER = 5;
 
@@ -80,16 +79,6 @@ export type PlaylistShufflerOutletContext = {
   handleClear: () => void;
   isDarkMode: boolean;
   onToggleTheme: (isDark: boolean) => void;
-  twitchChannel: string;
-  twitchOauthToken: string;
-  shadowbannedUsers: string;
-  blacklistedSongs: string;
-  twitchConnected: boolean;
-  requestCount: number;
-  setTwitchChannel: (value: string) => void;
-  setTwitchOauthToken: (value: string) => void;
-  setShadowbannedUsers: (value: string) => void;
-  setBlacklistedSongs: (value: string) => void;
   connectTwitchChat: () => void;
   disconnectTwitchChat: () => void;
   nowPlayingFolder: string;
@@ -105,16 +94,30 @@ export default function PlaylistShufflerApp({
   const location = useLocation();
   const isSettingsRoute = location.pathname.toLowerCase() === '/settings';
 
-  const [manualInput, setManualInput] = useState('');
-  const [queue, setQueue] = useState<VideoItem[]>([]);
-  const [currentIndex, setCurrentIndex] = useState(-1);
-  const [status, setStatus] = useState('');
-  const [message, setMessage] = useState<MessageState | null>(null);
-  const [nowPlaying, setNowPlaying] = useState<{ title: string; videoId: string }>({
-    title: '(nothing)',
-    videoId: ''
-  });
-  const [nowPlayingFolder, setNowPlayingFolder] = useState('');
+  const manualInput = usePlaylistStore((state) => state.manualInput);
+  const setManualInput = usePlaylistStore((state) => state.setManualInput);
+  const queue = usePlaylistStore((state) => state.queue);
+  const setQueue = usePlaylistStore((state) => state.setQueue);
+  const currentIndex = usePlaylistStore((state) => state.currentIndex);
+  const setCurrentIndex = usePlaylistStore((state) => state.setCurrentIndex);
+  const status = usePlaylistStore((state) => state.status);
+  const setStatus = usePlaylistStore((state) => state.setStatus);
+  const message = usePlaylistStore((state) => state.message);
+  const nowPlaying = usePlaylistStore((state) => state.nowPlaying);
+  const setNowPlaying = usePlaylistStore((state) => state.setNowPlaying);
+  const nowPlayingFolder = usePlaylistStore((state) => state.nowPlayingFolder);
+  const updateMessage = usePlaylistStore((state) => state.updateMessage);
+  const resetPlaylistState = usePlaylistStore((state) => state.resetPlaylistState);
+  const initializeNowPlayingFolder = usePlaylistStore((state) => state.initializeNowPlayingFolder);
+  const setNowPlayingFolderAndPersist = usePlaylistStore(
+    (state) => state.setNowPlayingFolderAndPersist
+  );
+  const clearNowPlayingFolderAndPersist = usePlaylistStore(
+    (state) => state.clearNowPlayingFolderAndPersist
+  );
+  const saveQueueSession = usePlaylistStore((state) => state.saveQueueSession);
+  const restoreQueueSession = usePlaylistStore((state) => state.restoreQueueSession);
+  const clearQueueSession = usePlaylistStore((state) => state.clearQueueSession);
 
   const queueRef = useRef<VideoItem[]>(queue);
   const currentIndexRef = useRef(currentIndex);
@@ -142,15 +145,8 @@ export default function PlaylistShufflerApp({
   }, []);
 
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem(NOW_PLAYING_FOLDER_STORAGE_KEY);
-      if (stored) {
-        setNowPlayingFolder(stored);
-      }
-    } catch {
-      // Ignore localStorage failures.
-    }
-  }, []);
+    initializeNowPlayingFolder();
+  }, [initializeNowPlayingFolder]);
 
   useEffect(() => {
     queueRef.current = queue;
@@ -163,10 +159,6 @@ export default function PlaylistShufflerApp({
   useEffect(() => {
     nowPlayingRef.current = nowPlaying;
   }, [nowPlaying]);
-
-  const updateMessage = useCallback((text: string, ok = false) => {
-    setMessage(text ? { text, ok } : null);
-  }, []);
 
   const reportNowPlaying = useCallback(
     async (item: { title: string; videoId: string }) => {
@@ -224,20 +216,9 @@ export default function PlaylistShufflerApp({
 
       player?.loadVideoById({ videoId });
 
-      try {
-        localStorage.setItem(
-          STORAGE_KEY,
-          JSON.stringify({
-            savedAt: new Date().toISOString(),
-            queue: currentQueue,
-            currentIndex: index
-          })
-        );
-      } catch {
-        // Ignore localStorage failures.
-      }
+      saveQueueSession(currentQueue, index);
     },
-    [reportNowPlaying]
+    [reportNowPlaying, saveQueueSession]
   );
 
   const nextVideo = useCallback(() => {
@@ -344,35 +325,14 @@ export default function PlaylistShufflerApp({
         return true;
       }
 
-      try {
-        localStorage.setItem(
-          STORAGE_KEY,
-          JSON.stringify({
-            savedAt: new Date().toISOString(),
-            queue: nextQueue,
-            currentIndex: currentIndexRef.current
-          })
-        );
-      } catch {
-        // Ignore localStorage failures.
-      }
+      saveQueueSession(nextQueue, currentIndexRef.current);
 
       return true;
     },
-    [playIndex, updateMessage]
+    [playIndex, saveQueueSession, updateMessage]
   );
 
   const {
-    twitchChannel,
-    twitchOauthToken,
-    shadowbannedUsers,
-    blacklistedSongs,
-    twitchConnected,
-    requestCount,
-    setTwitchChannel,
-    setTwitchOauthToken,
-    setShadowbannedUsers,
-    setBlacklistedSongs,
     connectTwitchChat,
     disconnectTwitchChat
   } = useTwitchRequests({
@@ -421,27 +381,14 @@ export default function PlaylistShufflerApp({
         }
       });
 
-      try {
-        const raw = localStorage.getItem(STORAGE_KEY);
-        if (raw) {
-          const saved = JSON.parse(raw) as { queue?: VideoItem[]; currentIndex?: number };
-          if (Array.isArray(saved.queue) && saved.queue.length) {
-            const restoredQueue = saved.queue;
-            const restoredIndex = Math.min(
-              Math.max(saved.currentIndex ?? 0, 0),
-              restoredQueue.length - 1
-            );
-
-            setQueue(restoredQueue);
-            setCurrentIndex(restoredIndex);
-            pendingPlayIndexRef.current = restoredIndex;
-            setStatus(`Restored last session (${restoredQueue.length} videos).`);
-            updateMessage('Restored from last session.', true);
-            return;
-          }
-        }
-      } catch {
-        // Ignore restore failures.
+      const restored = restoreQueueSession();
+      if (restored) {
+        setQueue(restored.queue);
+        setCurrentIndex(restored.currentIndex);
+        pendingPlayIndexRef.current = restored.currentIndex;
+        setStatus(`Restored last session (${restored.queue.length} videos).`);
+        updateMessage('Restored from last session.', true);
+        return;
       }
 
       setStatus('Ready. Import yt-dlp playlist.json to start.');
@@ -464,7 +411,7 @@ export default function PlaylistShufflerApp({
       tag.src = 'https://www.youtube.com/iframe_api';
       document.head.appendChild(tag);
     }
-  }, [nextVideo, playIndex, updateMessage]);
+  }, [nextVideo, playIndex, restoreQueueSession, updateMessage]);
 
   const handleImportYtdlp = useCallback(() => {
     fileInputYtdlpRef.current?.click();
@@ -482,23 +429,17 @@ export default function PlaylistShufflerApp({
         return;
       }
 
-      setNowPlayingFolder(selected);
-      localStorage.setItem(NOW_PLAYING_FOLDER_STORAGE_KEY, selected);
+      setNowPlayingFolderAndPersist(selected);
       updateMessage(`Now playing folder set: ${selected}`, true);
     } catch (error) {
       updateMessage(`Unable to choose folder: ${String(error)}`);
     }
-  }, [nowPlayingFolder, updateMessage]);
+  }, [nowPlayingFolder, setNowPlayingFolderAndPersist, updateMessage]);
 
   const handleClearNowPlayingFolder = useCallback(() => {
-    setNowPlayingFolder('');
-    try {
-      localStorage.removeItem(NOW_PLAYING_FOLDER_STORAGE_KEY);
-    } catch {
-      // Ignore localStorage failures.
-    }
+    clearNowPlayingFolderAndPersist();
     updateMessage('Now playing folder reset to default app path.', true);
-  }, [updateMessage]);
+  }, [clearNowPlayingFolderAndPersist, updateMessage]);
 
   const handleImportHtml = useCallback(() => {
     fileInputHtmlRef.current?.click();
@@ -576,21 +517,12 @@ export default function PlaylistShufflerApp({
   }, [manualInput, setQueueAndPlay, updateMessage]);
 
   const handleClear = useCallback(() => {
-    setManualInput('');
-    setQueue([]);
-    setCurrentIndex(-1);
-    setStatus('');
+    resetPlaylistState();
     updateMessage('Cleared.', true);
-    setNowPlaying({ title: '(nothing)', videoId: '' });
     pendingPlayIndexRef.current = null;
     userRequestCountsRef.current = {};
-
-    try {
-      localStorage.removeItem(STORAGE_KEY);
-    } catch {
-      // Ignore localStorage failures.
-    }
-  }, [updateMessage]);
+    clearQueueSession();
+  }, [clearQueueSession, resetPlaylistState, updateMessage]);
 
   const handleExportQueue = useCallback(() => {
     if (!queue.length) {
@@ -628,16 +560,6 @@ export default function PlaylistShufflerApp({
     handleClear,
     isDarkMode,
     onToggleTheme,
-    twitchChannel,
-    twitchOauthToken,
-    shadowbannedUsers,
-    blacklistedSongs,
-    twitchConnected,
-    requestCount,
-    setTwitchChannel,
-    setTwitchOauthToken,
-    setShadowbannedUsers,
-    setBlacklistedSongs,
     connectTwitchChat,
     disconnectTwitchChat,
     nowPlayingFolder,

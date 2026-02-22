@@ -9,7 +9,7 @@ type ManualInputCardProps = {
 
 export function ManualInputCard({ value, onChange, onLoad, onClear }: ManualInputCardProps) {
   return (
-    <Card withBorder radius="md" style={{ flex: 1, minWidth: 320 }}>
+    <Card withBorder radius="md">
       <Stack gap="sm">
         <Text size="xs" c="dimmed" fw={500}>
           Manual: paste video IDs (or URLs) — one per line

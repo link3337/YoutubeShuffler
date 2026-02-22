@@ -1,12 +1,11 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
+import { useTwitchStore } from '../../stores/twitchStore';
 import { extractVideoIdFromLine } from '../../utils/playlist';
 import { extractChatMessageFromIrcLine, extractRequestedVideoId } from '../../utils/twitch';
 
 const TWITCH_CHANNEL_STORAGE_KEY = 'ytpl_twitch_channel';
 const TWITCH_USERNAME_STORAGE_KEY = 'ytpl_twitch_username';
 const TWITCH_TOKEN_STORAGE_KEY = 'ytpl_twitch_token';
-const TWITCH_SHADOWBANNED_USERS_STORAGE_KEY = 'ytpl_twitch_shadowbanned_users';
-const TWITCH_BLACKLISTED_SONGS_STORAGE_KEY = 'ytpl_twitch_blacklisted_songs';
 
 type UseTwitchRequestsArgs = {
     updateMessage: (text: string, ok?: boolean) => void;
@@ -21,13 +20,20 @@ export function useTwitchRequests({
     queueSongRequest,
     getCurrentSong
 }: UseTwitchRequestsArgs) {
-    const [twitchChannel, setTwitchChannel] = useState('');
-    const [twitchUsername, setTwitchUsername] = useState('');
-    const [twitchOauthToken, setTwitchOauthToken] = useState('');
-    const [shadowbannedUsers, setShadowbannedUsers] = useState('');
-    const [blacklistedSongs, setBlacklistedSongs] = useState('');
-    const [twitchConnected, setTwitchConnected] = useState(false);
-    const [requestCount, setRequestCount] = useState(0);
+    const twitchChannel = useTwitchStore((state) => state.twitchChannel);
+    const twitchUsername = useTwitchStore((state) => state.twitchUsername);
+    const twitchOauthToken = useTwitchStore((state) => state.twitchOauthToken);
+    const shadowbannedUsers = useTwitchStore((state) => state.shadowbannedUsers);
+    const blacklistedSongs = useTwitchStore((state) => state.blacklistedSongs);
+    const twitchConnected = useTwitchStore((state) => state.twitchConnected);
+    const requestCount = useTwitchStore((state) => state.requestCount);
+
+    const setTwitchChannel = useTwitchStore((state) => state.setTwitchChannel);
+    const setTwitchOauthToken = useTwitchStore((state) => state.setTwitchOauthToken);
+    const setShadowbannedUsers = useTwitchStore((state) => state.setShadowbannedUsers);
+    const setBlacklistedSongs = useTwitchStore((state) => state.setBlacklistedSongs);
+    const setTwitchConnected = useTwitchStore((state) => state.setTwitchConnected);
+    const incrementRequestCount = useTwitchStore((state) => state.incrementRequestCount);
 
     const twitchSocketRef = useRef<WebSocket | null>(null);
 
@@ -37,53 +43,6 @@ export function useTwitchRequests({
             .map((line) => line.trim())
             .filter(Boolean);
     }, []);
-
-    useEffect(() => {
-        try {
-            const storedChannel = localStorage.getItem(TWITCH_CHANNEL_STORAGE_KEY);
-            if (storedChannel) {
-                setTwitchChannel(storedChannel);
-            }
-
-            const storedUsername = localStorage.getItem(TWITCH_USERNAME_STORAGE_KEY);
-            if (storedUsername) {
-                setTwitchUsername(storedUsername);
-            }
-
-            const storedToken = localStorage.getItem(TWITCH_TOKEN_STORAGE_KEY);
-            if (storedToken) {
-                setTwitchOauthToken(storedToken);
-            }
-
-            const storedShadowbannedUsers = localStorage.getItem(TWITCH_SHADOWBANNED_USERS_STORAGE_KEY);
-            if (storedShadowbannedUsers) {
-                setShadowbannedUsers(storedShadowbannedUsers);
-            }
-
-            const storedBlacklistedSongs = localStorage.getItem(TWITCH_BLACKLISTED_SONGS_STORAGE_KEY);
-            if (storedBlacklistedSongs) {
-                setBlacklistedSongs(storedBlacklistedSongs);
-            }
-        } catch {
-            // Ignore localStorage failures.
-        }
-    }, []);
-
-    useEffect(() => {
-        try {
-            localStorage.setItem(TWITCH_SHADOWBANNED_USERS_STORAGE_KEY, shadowbannedUsers);
-        } catch {
-            // Ignore localStorage failures.
-        }
-    }, [shadowbannedUsers]);
-
-    useEffect(() => {
-        try {
-            localStorage.setItem(TWITCH_BLACKLISTED_SONGS_STORAGE_KEY, blacklistedSongs);
-        } catch {
-            // Ignore localStorage failures.
-        }
-    }, [blacklistedSongs]);
 
     useEffect(() => {
         return () => {
@@ -307,7 +266,7 @@ export function useTwitchRequests({
 
                 const accepted = queueSongRequest(requestedVideoId, chatMessage.username);
                 if (accepted) {
-                    setRequestCount((count) => count + 1);
+                    incrementRequestCount();
                 }
             }
         };
@@ -335,7 +294,8 @@ export function useTwitchRequests({
         updateMessage,
         sendMessageToTwitchChannel,
         getCurrentSong,
-        queueSongRequest
+        queueSongRequest,
+        incrementRequestCount
     ]);
 
     return {

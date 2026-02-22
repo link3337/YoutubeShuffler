@@ -9,16 +9,6 @@ export default function SettingsRoute() {
   const {
     isDarkMode,
     onToggleTheme,
-    twitchChannel,
-    twitchOauthToken,
-    shadowbannedUsers,
-    blacklistedSongs,
-    twitchConnected,
-    requestCount,
-    setTwitchChannel,
-    setTwitchOauthToken,
-    setShadowbannedUsers,
-    setBlacklistedSongs,
     connectTwitchChat,
     disconnectTwitchChat,
     nowPlayingFolder,
@@ -42,16 +32,6 @@ export default function SettingsRoute() {
         />
 
         <TwitchRequestCard
-          channel={twitchChannel}
-          oauthToken={twitchOauthToken}
-          shadowbannedUsers={shadowbannedUsers}
-          blacklistedSongs={blacklistedSongs}
-          connected={twitchConnected}
-          requestCount={requestCount}
-          onChannelChange={setTwitchChannel}
-          onOauthTokenChange={setTwitchOauthToken}
-          onShadowbannedUsersChange={setShadowbannedUsers}
-          onBlacklistedSongsChange={setBlacklistedSongs}
           onConnect={connectTwitchChat}
           onDisconnect={disconnectTwitchChat}
         />

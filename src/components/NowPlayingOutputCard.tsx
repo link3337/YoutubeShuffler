@@ -32,7 +32,7 @@ export function NowPlayingOutputCard({
             Use default
           </Button>
         </Group>
-        <Text size="xs" c="dimmed">
+        <Text size="xs" c="dimmed" style={{ overflowWrap: 'anywhere' }}>
           <b>Output file:</b> <Code>{nowPlayingFilePath}</Code>
         </Text>
       </Stack>

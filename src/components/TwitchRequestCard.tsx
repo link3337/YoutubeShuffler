@@ -9,38 +9,31 @@ import {
   TextInput,
   Textarea
 } from '@mantine/core';
+import { useTwitchStore } from '../stores/twitchStore';
 
 type TwitchRequestCardProps = {
-  channel: string;
-  oauthToken: string;
-  shadowbannedUsers: string;
-  blacklistedSongs: string;
-  connected: boolean;
-  requestCount: number;
-  onChannelChange: (value: string) => void;
-  onOauthTokenChange: (value: string) => void;
-  onShadowbannedUsersChange: (value: string) => void;
-  onBlacklistedSongsChange: (value: string) => void;
   onConnect: () => void;
   onDisconnect: () => void;
 };
 
 export function TwitchRequestCard({
-  channel,
-  oauthToken,
-  shadowbannedUsers,
-  blacklistedSongs,
-  connected,
-  requestCount,
-  onChannelChange,
-  onOauthTokenChange,
-  onShadowbannedUsersChange,
-  onBlacklistedSongsChange,
   onConnect,
   onDisconnect
 }: TwitchRequestCardProps) {
+  const channel = useTwitchStore((state) => state.twitchChannel);
+  const oauthToken = useTwitchStore((state) => state.twitchOauthToken);
+  const shadowbannedUsers = useTwitchStore((state) => state.shadowbannedUsers);
+  const blacklistedSongs = useTwitchStore((state) => state.blacklistedSongs);
+  const connected = useTwitchStore((state) => state.twitchConnected);
+  const requestCount = useTwitchStore((state) => state.requestCount);
+
+  const onChannelChange = useTwitchStore((state) => state.setTwitchChannel);
+  const onOauthTokenChange = useTwitchStore((state) => state.setTwitchOauthToken);
+  const onShadowbannedUsersChange = useTwitchStore((state) => state.setShadowbannedUsers);
+  const onBlacklistedSongsChange = useTwitchStore((state) => state.setBlacklistedSongs);
+
   return (
-    <Card withBorder radius="md" style={{ flex: 1, minWidth: 320 }}>
+    <Card withBorder radius="md">
       <Stack gap="sm">
         <Group justify="space-between" align="center">
           <Text size="xs" c="dimmed" fw={500}>

@@ -39,7 +39,7 @@ export function PlayerQueueSection({
   }, [queue, searchQuery]);
 
   return (
-    <SimpleGrid cols={{ base: 1, md: 2 }} spacing="md" mt="md">
+    <SimpleGrid cols={{ base: 1, md: 2 }} spacing={{ base: 'sm', md: 'md' }} mt="md">
       <Box>
         <NowPlayingCard title={nowPlaying.title} videoId={nowPlaying.videoId} />
 
@@ -65,7 +65,7 @@ export function PlayerQueueSection({
               onChange={(event) => setSearchQuery(event.currentTarget.value)}
             />
           </Box>
-          <ScrollArea h={520}>
+          <ScrollArea h="min(520px, 45vh)">
             {filteredQueue.length ? (
               filteredQueue.map(({ item, index }) => (
                 <Box

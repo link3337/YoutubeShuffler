@@ -41,6 +41,7 @@ body {
 .queue-item {
   padding: 10px 12px;
   border-bottom: 1px solid var(--mantine-color-gray-3);
+  word-break: break-word;
   transition:
     transform 120ms ease,
     background-color 120ms ease;
@@ -61,4 +62,26 @@ body {
 
 .hidden-inputs {
   display: none;
+}
+
+@media (max-width: 768px) {
+  .app {
+    max-width: 100%;
+  }
+
+  .panel {
+    padding: 14px;
+  }
+
+  .title {
+    font-size: clamp(1.35rem, 4.8vw, 1.75rem);
+  }
+
+  #player {
+    border-radius: 10px;
+  }
+
+  .queue-item {
+    padding: 10px;
+  }
 }

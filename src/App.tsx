@@ -2,6 +2,7 @@ import {
   AppShell,
   Button,
   Container,
+  Group,
   Stack,
   useComputedColorScheme,
   useMantineColorScheme
@@ -16,10 +17,22 @@ function App() {
 
   const location = useLocation();
   const isHomeRoute = location.pathname.toLowerCase() === '/home';
+  const isSettingsRoute = location.pathname.toLowerCase() === '/settings';
+  const showMobileFooterNav = isHomeRoute || isSettingsRoute;
 
   return (
-    <AppShell>
-      <AppShell.Navbar p="md">
+    <AppShell
+      navbar={{
+        width: 72,
+        breakpoint: 'sm',
+        collapsed: { mobile: showMobileFooterNav }
+      }}
+      footer={{
+        height: 58,
+        collapsed: !showMobileFooterNav
+      }}
+    >
+      <AppShell.Navbar p="xs">
         <Stack gap="xs">
           <Button
             component={Link}
@@ -42,8 +55,29 @@ function App() {
         </Stack>
       </AppShell.Navbar>
 
+      <AppShell.Footer p="xs">
+        <Group grow wrap="nowrap">
+          <Button
+            component={Link}
+            to="/home"
+            variant={isHomeRoute ? 'light' : 'subtle'}
+            aria-label="Home"
+          >
+            <IconHome size={18} />
+          </Button>
+          <Button
+            component={Link}
+            to="/settings"
+            variant={!isHomeRoute ? 'light' : 'subtle'}
+            aria-label="Settings"
+          >
+            <IconSettings size={18} />
+          </Button>
+        </Group>
+      </AppShell.Footer>
+
       <AppShell.Main>
-        <Container size="xl" py="md" className="app">
+        <Container size="xl" py={{ base: 'sm', sm: 'md' }} px={{ base: 'xs', sm: 'md' }} className="app">
           <AppRoutes
             isDarkMode={computedColorScheme === 'dark'}
             onToggleTheme={(isDark) => setColorScheme(isDark ? 'dark' : 'light')}

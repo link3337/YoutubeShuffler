@@ -20,7 +20,7 @@ export function ImportCard({
   onExportQueue
 }: ImportCardProps) {
   return (
-    <Card withBorder radius="md" miw={380}>
+    <Card withBorder radius="md">
       <Stack gap="sm">
         <Text size="xs" c="dimmed" fw={500}>
           Import
