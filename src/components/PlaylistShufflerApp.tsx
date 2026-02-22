@@ -1,7 +1,8 @@
+import { Box } from '@mantine/core';
 import { invoke } from '@tauri-apps/api/core';
 import { open } from '@tauri-apps/plugin-dialog';
 import { useCallback, useEffect, useRef, useState, type ChangeEvent } from 'react';
-import { Outlet } from 'react-router-dom';
+import { Outlet, useLocation } from 'react-router-dom';
 import '../App.css';
 import type { MessageState, VideoItem } from '../types';
 import {
@@ -14,6 +15,7 @@ import {
   uniqueBy
 } from '../utils/playlist';
 import { extractChatMessageFromIrcLine, extractRequestedVideoId } from '../utils/twitch';
+import { PlayerQueueSection } from './PlayerQueueSection';
 
 const STORAGE_KEY = 'ytpl_last';
 const NOW_PLAYING_FOLDER_STORAGE_KEY = 'ytpl_now_playing_folder';
@@ -105,6 +107,9 @@ export default function PlaylistShufflerApp({
   isDarkMode,
   onToggleTheme
 }: PlaylistShufflerAppProps) {
+  const location = useLocation();
+  const isSettingsRoute = location.pathname.toLowerCase() === '/settings';
+
   const [manualInput, setManualInput] = useState('');
   const [queue, setQueue] = useState<VideoItem[]>([]);
   const [currentIndex, setCurrentIndex] = useState(-1);
@@ -932,6 +937,16 @@ export default function PlaylistShufflerApp({
   return (
     <>
       <Outlet context={outletContext} />
+
+      <Box mt="md" style={isSettingsRoute ? { display: 'none' } : undefined}>
+        <PlayerQueueSection
+          nowPlaying={nowPlaying}
+          playerRef={playerContainerRef}
+          queue={queue}
+          currentIndex={currentIndex}
+          onPlayIndex={playIndex}
+        />
+      </Box>
 
       <div className="hidden-inputs">
         <input
