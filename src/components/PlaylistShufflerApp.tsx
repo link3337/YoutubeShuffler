@@ -4,7 +4,11 @@ import { open } from '@tauri-apps/plugin-dialog';
 import { useCallback, useEffect, useRef, type ChangeEvent } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import '../App.css';
-import { usePlaylistStore } from '../stores/playlistStore';
+import {
+  selectCurrentIndex,
+  selectLoopCurrentSong,
+  selectNowPlaying, selectQueue, usePlaylistStore
+} from '../stores/playlistStore';
 import type { MessageState, VideoItem } from '../types';
 import {
   downloadJson,
@@ -98,16 +102,16 @@ export default function PlaylistShufflerApp({
 
   const manualInput = usePlaylistStore((state) => state.manualInput);
   const setManualInput = usePlaylistStore((state) => state.setManualInput);
-  const queue = usePlaylistStore((state) => state.queue);
+  const queue = usePlaylistStore(selectQueue);
   const setQueue = usePlaylistStore((state) => state.setQueue);
-  const currentIndex = usePlaylistStore((state) => state.currentIndex);
+  const currentIndex = usePlaylistStore(selectCurrentIndex);
   const setCurrentIndex = usePlaylistStore((state) => state.setCurrentIndex);
-  const loopCurrentSong = usePlaylistStore((state) => state.loopCurrentSong);
+  const loopCurrentSong = usePlaylistStore(selectLoopCurrentSong);
   const setLoopCurrentSong = usePlaylistStore((state) => state.setLoopCurrentSong);
   const status = usePlaylistStore((state) => state.status);
   const setStatus = usePlaylistStore((state) => state.setStatus);
   const message = usePlaylistStore((state) => state.message);
-  const nowPlaying = usePlaylistStore((state) => state.nowPlaying);
+  const nowPlaying = usePlaylistStore(selectNowPlaying);
   const setNowPlaying = usePlaylistStore((state) => state.setNowPlaying);
   const nowPlayingFolder = usePlaylistStore((state) => state.nowPlayingFolder);
   const updateMessage = usePlaylistStore((state) => state.updateMessage);

@@ -162,3 +162,19 @@ export const usePlaylistStore = create<PlaylistStoreState>()((set) => ({
       });
     })()
 }));
+
+export const selectQueue = (s: PlaylistStoreState) => s.queue;
+export const selectCurrentIndex = (s: PlaylistStoreState) => s.currentIndex;
+export const selectLoopCurrentSong = (s: PlaylistStoreState) => s.loopCurrentSong;
+export const selectNowPlaying = (s: PlaylistStoreState) => s.nowPlaying;
+
+export const getPlaylistStoreState = () => usePlaylistStore.getState();
+export const getQueue = () => usePlaylistStore.getState().queue;
+export const setQueueState = (q: VideoItem[]) => usePlaylistStore.getState().setQueue(q);
+export const getCurrentIndex = () => usePlaylistStore.getState().currentIndex;
+export const setCurrentIndexState = (i: number) => usePlaylistStore.getState().setCurrentIndex(i);
+export const toggleLoopCurrentSong = () => {
+  const s = usePlaylistStore.getState();
+  s.setLoopCurrentSong(!s.loopCurrentSong);
+};
+
