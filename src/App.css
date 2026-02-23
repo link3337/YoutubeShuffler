@@ -39,12 +39,15 @@ body {
 }
 
 .queue-item {
-  padding: 10px 12px;
-  border-bottom: 1px solid var(--mantine-color-gray-3);
+  padding: 8px 12px;
+  margin: 6px 8px;
+  border-radius: 8px;
+  border: 1px solid transparent;
   word-break: break-word;
   transition:
     transform 120ms ease,
-    background-color 120ms ease;
+    background-color 120ms ease,
+    border-color 120ms ease;
 }
 
 .queue-item[role='button'] {
@@ -54,10 +57,11 @@ body {
 .queue-item[role='button']:hover {
   background: color-mix(in srgb, var(--mantine-color-blue-light) 55%, transparent);
   transform: translateX(2px);
+  border-color: color-mix(in srgb, var(--mantine-color-blue-light) 30%, transparent);
 }
 
 .queue-item:last-child {
-  border-bottom: 0;
+  margin-bottom: 10px;
 }
 
 .hidden-inputs {

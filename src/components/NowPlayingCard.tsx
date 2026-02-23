@@ -8,7 +8,7 @@ type NowPlayingCardProps = {
 
 export function NowPlayingCard({ title, videoId }: NowPlayingCardProps) {
   return (
-    <Card withBorder radius="md" mt="md" className="now-playing-card">
+    <Card withBorder radius="md" className="now-playing-card">
       <Text size="sm">
         Now playing: <b>{title || '(nothing)'}</b>
       </Text>

@@ -25,15 +25,14 @@ export function Queue({ queue, currentIndex, onPlayIndex }: QueueProps) {
 
   return (
     <Box className="queue-column">
-      <Group justify="space-between" align="center" mb="xs">
-        <Group gap="xs">
-          <Text fw={700}>Queue</Text>
-          <Badge variant="light">{queue.length}</Badge>
-        </Group>
-      </Group>
-
       <Card withBorder radius="md" p={0} className="queue-card">
         <Box p="xs" pb={0}>
+          <Group justify="space-between" align="center" mb="xs">
+            <Group gap="xs">
+              <Text fw={700}>Queue</Text>
+              <Badge variant="light">{queue.length}</Badge>
+            </Group>
+          </Group>
           <TextInput
             placeholder="Search queue by title or video ID"
             value={searchQuery}

@@ -177,4 +177,3 @@ export const toggleLoopCurrentSong = () => {
   const s = usePlaylistStore.getState();
   s.setLoopCurrentSong(!s.loopCurrentSong);
 };
-

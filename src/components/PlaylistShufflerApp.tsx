@@ -7,7 +7,9 @@ import '../App.css';
 import {
   selectCurrentIndex,
   selectLoopCurrentSong,
-  selectNowPlaying, selectQueue, usePlaylistStore
+  selectNowPlaying,
+  selectQueue,
+  usePlaylistStore
 } from '../stores/playlistStore';
 import type { MessageState, VideoItem } from '../types';
 import {
