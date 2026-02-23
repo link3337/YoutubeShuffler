@@ -341,10 +341,7 @@ export default function PlaylistShufflerApp({
     [playIndex, saveQueueSession, updateMessage]
   );
 
-  const {
-    connectTwitchChat,
-    disconnectTwitchChat
-  } = useTwitchRequests({
+  const { connectTwitchChat, disconnectTwitchChat } = useTwitchRequests({
     updateMessage,
     setStatus,
     queueSongRequest,

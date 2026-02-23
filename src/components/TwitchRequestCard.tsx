@@ -16,10 +16,7 @@ type TwitchRequestCardProps = {
   onDisconnect: () => void;
 };
 
-export function TwitchRequestCard({
-  onConnect,
-  onDisconnect
-}: TwitchRequestCardProps) {
+export function TwitchRequestCard({ onConnect, onDisconnect }: TwitchRequestCardProps) {
   const channel = useTwitchStore((state) => state.twitchChannel);
   const oauthToken = useTwitchStore((state) => state.twitchOauthToken);
   const shadowbannedUsers = useTwitchStore((state) => state.shadowbannedUsers);

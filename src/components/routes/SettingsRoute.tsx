@@ -31,10 +31,7 @@ export default function SettingsRoute() {
           className="theme-switch"
         />
 
-        <TwitchRequestCard
-          onConnect={connectTwitchChat}
-          onDisconnect={disconnectTwitchChat}
-        />
+        <TwitchRequestCard onConnect={connectTwitchChat} onDisconnect={disconnectTwitchChat} />
 
         <NowPlayingOutputCard
           nowPlayingFolder={nowPlayingFolder}

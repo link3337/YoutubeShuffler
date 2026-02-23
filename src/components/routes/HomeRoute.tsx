@@ -7,47 +7,47 @@ import { StatusMessage } from '../StatusMessage';
 import Header from '../layout/Header';
 
 export default function HomeRoute() {
-    const {
-        manualInput,
-        setManualInput,
-        queue,
-        loopCurrentSong,
-        setLoopCurrentSong,
-        status,
-        message,
-        handleImportYtdlp,
-        handleImportHtml,
-        previousVideo,
-        nextVideo,
-        reshuffleKeepCurrent,
-        handleExportQueue,
-        handleLoadManual,
-        handleClear
-    } = useOutletContext<PlaylistShufflerOutletContext>();
+  const {
+    manualInput,
+    setManualInput,
+    queue,
+    loopCurrentSong,
+    setLoopCurrentSong,
+    status,
+    message,
+    handleImportYtdlp,
+    handleImportHtml,
+    previousVideo,
+    nextVideo,
+    reshuffleKeepCurrent,
+    handleExportQueue,
+    handleLoadManual,
+    handleClear
+  } = useOutletContext<PlaylistShufflerOutletContext>();
 
-    return (
-        <>
-            <Header />
-            <SimpleGrid cols={{ base: 1, md: 2 }} spacing="md" mt="md">
-                <ImportCard
-                    hasQueue={queue.length > 0}
-                    loopCurrentSong={loopCurrentSong}
-                    onImportYtdlp={handleImportYtdlp}
-                    onImportHtml={handleImportHtml}
-                    onPrev={previousVideo}
-                    onNext={nextVideo}
-                    onReshuffle={reshuffleKeepCurrent}
-                    onExportQueue={handleExportQueue}
-                    onToggleLoopCurrentSong={() => setLoopCurrentSong(!loopCurrentSong)}
-                />
-                <ManualInputCard
-                    value={manualInput}
-                    onChange={setManualInput}
-                    onLoad={handleLoadManual}
-                    onClear={handleClear}
-                />
-            </SimpleGrid>
-            <StatusMessage status={status} message={message} />
-        </>
-    );
+  return (
+    <>
+      <Header />
+      <SimpleGrid cols={{ base: 1, md: 2 }} spacing="md" mt="md">
+        <ImportCard
+          hasQueue={queue.length > 0}
+          loopCurrentSong={loopCurrentSong}
+          onImportYtdlp={handleImportYtdlp}
+          onImportHtml={handleImportHtml}
+          onPrev={previousVideo}
+          onNext={nextVideo}
+          onReshuffle={reshuffleKeepCurrent}
+          onExportQueue={handleExportQueue}
+          onToggleLoopCurrentSong={() => setLoopCurrentSong(!loopCurrentSong)}
+        />
+        <ManualInputCard
+          value={manualInput}
+          onChange={setManualInput}
+          onLoad={handleLoadManual}
+          onClear={handleClear}
+        />
+      </SimpleGrid>
+      <StatusMessage status={status} message={message} />
+    </>
+  );
 }

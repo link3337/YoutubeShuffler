@@ -61,7 +61,12 @@ function App() {
       </AppShell.Footer>
 
       <AppShell.Main>
-        <Container size="xl" py={{ base: 'sm', sm: 'md' }} px={{ base: 'xs', sm: 'md' }} className="app">
+        <Container
+          size="xl"
+          py={{ base: 'sm', sm: 'md' }}
+          px={{ base: 'xs', sm: 'md' }}
+          className="app"
+        >
           <AppRoutes
             isDarkMode={computedColorScheme === 'dark'}
             onToggleTheme={(isDark) => setColorScheme(isDark ? 'dark' : 'light')}

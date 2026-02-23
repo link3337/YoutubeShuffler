@@ -1,9 +1,5 @@
 import { ActionIcon, Anchor, Group, Stack, Text } from '@mantine/core';
-import {
-  IconBrandMantine,
-  IconBrandReact,
-  IconHeartFilled
-} from '@tabler/icons-react';
+import { IconBrandMantine, IconBrandReact, IconHeartFilled } from '@tabler/icons-react';
 
 export default function Footer() {
   return (
@@ -17,19 +13,64 @@ export default function Footer() {
       </Text>
 
       <Group gap="xs" justify="center">
-        <ActionIcon variant="subtle" color="yellow" aria-label="Vite" size="lg">
+        <ActionIcon
+          variant="subtle"
+          color="yellow"
+          aria-label="Vite"
+          size="lg"
+          component="a"
+          href="https://vite.dev"
+          target="_blank"
+          rel="noreferrer"
+        >
           <img src="/vite.svg" alt="Vite" width={24} height={24} />
         </ActionIcon>
-        <ActionIcon variant="subtle" color="orange" aria-label="Tauri" size="lg">
+        <ActionIcon
+          variant="subtle"
+          color="orange"
+          aria-label="Tauri"
+          size="lg"
+          component="a"
+          href="https://tauri.app"
+          target="_blank"
+          rel="noreferrer"
+        >
           <img src="/tauri.svg" alt="Tauri" width={24} height={24} />
         </ActionIcon>
-        <ActionIcon variant="subtle" color="cyan" aria-label="React" size="lg">
+        <ActionIcon
+          variant="subtle"
+          color="cyan"
+          aria-label="React"
+          size="lg"
+          component="a"
+          href="https://react.dev"
+          target="_blank"
+          rel="noreferrer"
+        >
           <IconBrandReact size={24} />
         </ActionIcon>
-        <ActionIcon variant="subtle" color="red" aria-label="Zustand" size="lg">
+        <ActionIcon
+          variant="subtle"
+          color="red"
+          aria-label="Zustand"
+          size="lg"
+          component="a"
+          href="https://zustand.docs.pmnd.rs"
+          target="_blank"
+          rel="noreferrer"
+        >
           <img src="/zustand.svg" alt="Zustand" width={24} height={24} />
         </ActionIcon>
-        <ActionIcon variant="subtle" color="blue" aria-label="Mantine" size="lg">
+        <ActionIcon
+          variant="subtle"
+          color="blue"
+          aria-label="Mantine"
+          size="lg"
+          component="a"
+          href="https://mantine.dev"
+          target="_blank"
+          rel="noreferrer"
+        >
           <IconBrandMantine size={24} />
         </ActionIcon>
       </Group>
