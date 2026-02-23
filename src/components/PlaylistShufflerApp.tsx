@@ -592,6 +592,10 @@ export default function PlaylistShufflerApp({
           queue={queue}
           currentIndex={currentIndex}
           onPlayIndex={playIndex}
+          onPrev={previousVideo}
+          onNext={nextVideo}
+          loopCurrentSong={loopCurrentSong}
+          onToggleLoopCurrentSong={() => setLoopCurrentSong(!loopCurrentSong)}
         />
       </Box>
 

@@ -17,8 +17,6 @@ export default function HomeRoute() {
     message,
     handleImportYtdlp,
     handleImportHtml,
-    previousVideo,
-    nextVideo,
     reshuffleKeepCurrent,
     handleExportQueue,
     handleLoadManual,
@@ -31,11 +29,8 @@ export default function HomeRoute() {
       <SimpleGrid cols={{ base: 1, md: 2 }} spacing="md" mt="md">
         <ImportCard
           hasQueue={queue.length > 0}
-          loopCurrentSong={loopCurrentSong}
           onImportYtdlp={handleImportYtdlp}
           onImportHtml={handleImportHtml}
-          onPrev={previousVideo}
-          onNext={nextVideo}
           onReshuffle={reshuffleKeepCurrent}
           onExportQueue={handleExportQueue}
           onToggleLoopCurrentSong={() => setLoopCurrentSong(!loopCurrentSong)}

@@ -1,4 +1,5 @@
 import { Card, Text } from '@mantine/core';
+import './PlayerArea.css';
 
 type NowPlayingCardProps = {
   title: string;
@@ -7,7 +8,7 @@ type NowPlayingCardProps = {
 
 export function NowPlayingCard({ title, videoId }: NowPlayingCardProps) {
   return (
-    <Card withBorder radius="md" mt="md">
+    <Card withBorder radius="md" mt="md" className="now-playing-card">
       <Text size="sm">
         Now playing: <b>{title || '(nothing)'}</b>
       </Text>

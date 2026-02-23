@@ -1,0 +1,17 @@
+.player-area {
+  display: flex;
+  flex-direction: column;
+  height: 520px;
+}
+
+.player-iframe {
+  flex: 1;
+  min-height: 0;
+}
+
+.now-playing-card {
+  min-height: 96px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}

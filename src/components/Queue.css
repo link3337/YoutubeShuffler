@@ -1,0 +1,14 @@
+.queue-column {
+  display: flex;
+  flex-direction: column;
+  height: 520px;
+}
+
+.queue-card {
+  flex: 1;
+}
+
+.queue-scroll {
+  flex: 1;
+  min-height: 0;
+}
