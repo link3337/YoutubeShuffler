@@ -1,5 +1,4 @@
 import { Box } from '@mantine/core';
-import { invoke } from '@tauri-apps/api/core';
 import { open } from '@tauri-apps/plugin-dialog';
 import { useCallback, useEffect, useRef, type ChangeEvent } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
@@ -21,6 +20,7 @@ import {
   sanitizeTitleForTextFile,
   uniqueBy
 } from '../utils/playlist';
+import { safeInvoke } from '../utils/tauri';
 import { useTwitchRequests } from './hooks/useTwitchRequests';
 import { PlayerQueueSection } from './PlayerQueueSection';
 
@@ -186,7 +186,7 @@ export default function PlaylistShufflerApp({
 
       if (item) {
         try {
-          await invoke('write_now_playing', {
+          await safeInvoke('write_now_playing', {
             title: sanitizeTitleForTextFile(item.title || ''),
             path: outPath
           });
