@@ -8,7 +8,12 @@ type NowPlayingCardProps = {
   queueLength?: number;
 };
 
-export function NowPlayingCard({ title, videoId, positionInQueue, queueLength }: NowPlayingCardProps) {
+export function NowPlayingCard({
+  title,
+  videoId,
+  positionInQueue,
+  queueLength
+}: NowPlayingCardProps) {
   return (
     <Card withBorder radius="md" className="now-playing-card">
       <Text size="sm">

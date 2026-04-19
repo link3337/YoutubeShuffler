@@ -541,6 +541,63 @@ export default function PlaylistShufflerApp({
     clearQueueSession();
   }, [clearQueueSession, resetPlaylistState, updateMessage]);
 
+  const removeQueueItem = useCallback(
+    (removeIndex: number) => {
+      const currentQueue = queueRef.current;
+      if (removeIndex < 0 || removeIndex >= currentQueue.length) {
+        return;
+      }
+
+      const nextQueue = currentQueue.filter((_, idx) => idx !== removeIndex);
+      queueRef.current = nextQueue;
+
+      if (!nextQueue.length) {
+        setQueue([]);
+        setCurrentIndex(-1);
+        setNowPlaying({ title: '(nothing)', videoId: '' });
+        clearQueueSession();
+        setStatus('Queue is empty.');
+        updateMessage('Removed song from current queue.', true);
+        return;
+      }
+
+      const previousCurrent = currentIndexRef.current;
+
+      if (removeIndex < previousCurrent) {
+        const nextIndex = previousCurrent - 1;
+        setQueue(nextQueue);
+        setCurrentIndex(nextIndex);
+        saveQueueSession(nextQueue, nextIndex);
+        updateMessage('Removed song from current queue.', true);
+        return;
+      }
+
+      if (removeIndex === previousCurrent) {
+        const nextIndex = Math.min(removeIndex, nextQueue.length - 1);
+        setQueue(nextQueue);
+        setCurrentIndex(nextIndex);
+        saveQueueSession(nextQueue, nextIndex);
+        playIndex(nextIndex);
+        updateMessage('Removed current song and continued playback.', true);
+        return;
+      }
+
+      setQueue(nextQueue);
+      saveQueueSession(nextQueue, previousCurrent);
+      updateMessage('Removed song from current queue.', true);
+    },
+    [
+      clearQueueSession,
+      playIndex,
+      saveQueueSession,
+      setCurrentIndex,
+      setNowPlaying,
+      setQueue,
+      setStatus,
+      updateMessage
+    ]
+  );
+
   const handleExportQueue = useCallback(() => {
     if (!queue.length) {
       return;
@@ -598,10 +655,12 @@ export default function PlaylistShufflerApp({
           queue={queue}
           currentIndex={currentIndex}
           onPlayIndex={playIndex}
+          onRemoveIndex={removeQueueItem}
           onPrev={previousVideo}
           onNext={nextVideo}
           loopCurrentSong={loopCurrentSong}
           onToggleLoopCurrentSong={() => setLoopCurrentSong(!loopCurrentSong)}
+          isDarkMode={isDarkMode}
         />
       </Box>
 

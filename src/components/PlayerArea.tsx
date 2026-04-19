@@ -1,5 +1,10 @@
 import { Box, Button, Group, Text } from '@mantine/core';
-import { IconLink, IconPlayerSkipBack, IconPlayerSkipForward, IconRepeat } from '@tabler/icons-react';
+import {
+  IconLink,
+  IconPlayerSkipBack,
+  IconPlayerSkipForward,
+  IconRepeat
+} from '@tabler/icons-react';
 import type { RefObject } from 'react';
 import { useState } from 'react';
 import copyTextToClipboard from '../utils/util';
@@ -63,7 +68,14 @@ export function PlayerArea({
           <IconRepeat size={16} />
         </Button>
         <Button onClick={handleCopyLink} disabled={!nowPlaying?.videoId} aria-label="Copy link">
-          {copied ? 'Copied' : (<><IconLink size={16} style={{ marginRight: 8 }} />Copy link</>)}
+          {copied ? (
+            'Copied'
+          ) : (
+            <>
+              <IconLink size={16} style={{ marginRight: 8 }} />
+              Copy link
+            </>
+          )}
         </Button>
       </Group>
 

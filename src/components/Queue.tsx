@@ -1,16 +1,27 @@
 import { Badge, Box, Card, Group, ScrollArea, Text, TextInput } from '@mantine/core';
 import { useEffect, useMemo, useState } from 'react';
 import type { VideoItem } from '../types';
+import copyTextToClipboard from '../utils/util';
 import './Queue.css';
+import QueueContextMenu from './QueueContextMenu';
 
 type QueueProps = {
   queue: VideoItem[];
   currentIndex: number;
   onPlayIndex: (index: number) => void;
+  onRemoveIndex: (index: number) => void;
+  isDarkMode?: boolean;
 };
 
-export function Queue({ queue, currentIndex, onPlayIndex }: QueueProps) {
+export function Queue({ queue, currentIndex, onPlayIndex, onRemoveIndex, isDarkMode }: QueueProps) {
   const [searchQuery, setSearchQuery] = useState('');
+  const [contextMenu, setContextMenu] = useState<{
+    visible: boolean;
+    x: number;
+    y: number;
+    index: number | null;
+    message?: string;
+  }>({ visible: false, x: 0, y: 0, index: null });
 
   const filteredQueue = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
@@ -31,6 +42,29 @@ export function Queue({ queue, currentIndex, onPlayIndex }: QueueProps) {
       el.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
     }
   }, [currentIndex]);
+
+  useEffect(() => {
+    const onMouseDown = (e: MouseEvent) => {
+      if (!contextMenu.visible) return;
+      const target = e.target as HTMLElement | null;
+      if (!target) return;
+      if (target.closest && target.closest('.queue-context-menu')) return;
+      setContextMenu({ visible: false, x: 0, y: 0, index: null });
+    };
+
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && contextMenu.visible) {
+        setContextMenu({ visible: false, x: 0, y: 0, index: null });
+      }
+    };
+
+    document.addEventListener('mousedown', onMouseDown);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', onMouseDown);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [contextMenu.visible]);
 
   return (
     <Box className="queue-column">
@@ -57,6 +91,10 @@ export function Queue({ queue, currentIndex, onPlayIndex }: QueueProps) {
                 className={`queue-item ${index === currentIndex ? 'now' : ''}`}
                 title={item.videoId}
                 onClick={() => onPlayIndex(index)}
+                onContextMenu={(e) => {
+                  e.preventDefault();
+                  setContextMenu({ visible: true, x: e.clientX, y: e.clientY, index });
+                }}
                 onKeyDown={(event) => {
                   if (event.key === 'Enter' || event.key === ' ') {
                     event.preventDefault();
@@ -75,6 +113,33 @@ export function Queue({ queue, currentIndex, onPlayIndex }: QueueProps) {
             </Text>
           )}
         </ScrollArea>
+        {contextMenu.visible && contextMenu.index != null && (
+          <QueueContextMenu
+            x={contextMenu.x}
+            y={contextMenu.y}
+            isDarkMode={!!isDarkMode}
+            onCopyLink={async () => {
+              const idx = contextMenu.index as number;
+              const item = queue[idx];
+              if (!item || !item.videoId) return;
+              const url = `https://youtu.be/${item.videoId}`;
+              const ok = await copyTextToClipboard(url);
+              setContextMenu({
+                visible: false,
+                x: 0,
+                y: 0,
+                index: null,
+                message: ok ? 'Copied' : 'Failed'
+              });
+            }}
+            onRemove={() => {
+              const idx = contextMenu.index;
+              if (idx == null || idx < 0) return;
+              setContextMenu({ visible: false, x: 0, y: 0, index: null });
+              onRemoveIndex(idx);
+            }}
+          />
+        )}
       </Card>
     </Box>
   );

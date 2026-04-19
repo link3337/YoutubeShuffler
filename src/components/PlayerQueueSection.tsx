@@ -13,10 +13,12 @@ type PlayerQueueSectionProps = {
   queue: VideoItem[];
   currentIndex: number;
   onPlayIndex: (index: number) => void;
+  onRemoveIndex: (index: number) => void;
   onPrev: () => void;
   onNext: () => void;
   loopCurrentSong: boolean;
   onToggleLoopCurrentSong: () => void;
+  isDarkMode?: boolean;
 };
 
 export function PlayerQueueSection({
@@ -25,10 +27,12 @@ export function PlayerQueueSection({
   queue,
   currentIndex,
   onPlayIndex,
+  onRemoveIndex,
   onPrev,
   onNext,
   loopCurrentSong,
-  onToggleLoopCurrentSong
+  onToggleLoopCurrentSong,
+  isDarkMode
 }: PlayerQueueSectionProps) {
   return (
     <SimpleGrid cols={{ base: 1, md: 2 }} spacing={{ base: 'sm', md: 'md' }} mt="md">
@@ -43,7 +47,13 @@ export function PlayerQueueSection({
         onToggleLoopCurrentSong={onToggleLoopCurrentSong}
       />
 
-      <Queue queue={queue} currentIndex={currentIndex} onPlayIndex={onPlayIndex} />
+      <Queue
+        queue={queue}
+        currentIndex={currentIndex}
+        onPlayIndex={onPlayIndex}
+        onRemoveIndex={onRemoveIndex}
+        isDarkMode={isDarkMode}
+      />
     </SimpleGrid>
   );
 }
