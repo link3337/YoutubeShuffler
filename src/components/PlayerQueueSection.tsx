@@ -36,6 +36,7 @@ export function PlayerQueueSection({
         nowPlaying={nowPlaying}
         playerRef={playerRef}
         queueLength={queue.length}
+        currentIndex={currentIndex}
         onPrev={onPrev}
         onNext={onNext}
         loopCurrentSong={loopCurrentSong}

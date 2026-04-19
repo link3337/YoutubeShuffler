@@ -1,5 +1,5 @@
 import { Badge, Box, Card, Group, ScrollArea, Text, TextInput } from '@mantine/core';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { VideoItem } from '../types';
 import './Queue.css';
 
@@ -23,6 +23,15 @@ export function Queue({ queue, currentIndex, onPlayIndex }: QueueProps) {
     });
   }, [queue, searchQuery]);
 
+  useEffect(() => {
+    if (currentIndex == null || currentIndex < 0) return;
+    const selector = `[data-queue-index=\"${currentIndex}\"]`;
+    const el = document.querySelector(selector) as HTMLElement | null;
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
+    }
+  }, [currentIndex]);
+
   return (
     <Box className="queue-column">
       <Card withBorder radius="md" p={0} className="queue-card">
@@ -44,6 +53,7 @@ export function Queue({ queue, currentIndex, onPlayIndex }: QueueProps) {
             filteredQueue.map(({ item, index }) => (
               <Box
                 key={`${item.videoId}-${index}`}
+                data-queue-index={index}
                 className={`queue-item ${index === currentIndex ? 'now' : ''}`}
                 title={item.videoId}
                 onClick={() => onPlayIndex(index)}

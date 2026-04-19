@@ -1,6 +1,8 @@
 import { Box, Button, Group, Text } from '@mantine/core';
-import { IconPlayerSkipBack, IconPlayerSkipForward, IconRepeat } from '@tabler/icons-react';
+import { IconLink, IconPlayerSkipBack, IconPlayerSkipForward, IconRepeat } from '@tabler/icons-react';
 import type { RefObject } from 'react';
+import { useState } from 'react';
+import copyTextToClipboard from '../utils/util';
 import { NowPlayingCard } from './NowPlayingCard';
 import './PlayerArea.css';
 
@@ -8,6 +10,7 @@ type PlayerAreaProps = {
   nowPlaying: { title: string; videoId: string };
   playerRef: RefObject<HTMLDivElement | null>;
   queueLength: number;
+  currentIndex: number;
   onPrev: () => void;
   onNext: () => void;
   loopCurrentSong: boolean;
@@ -18,14 +21,31 @@ export function PlayerArea({
   nowPlaying,
   playerRef,
   queueLength,
+  currentIndex,
   onPrev,
   onNext,
   loopCurrentSong,
   onToggleLoopCurrentSong
 }: PlayerAreaProps) {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopyLink = async () => {
+    if (!nowPlaying?.videoId) return;
+    const url = `https://youtu.be/${nowPlaying.videoId}`;
+    const ok = await copyTextToClipboard(url);
+    if (ok) {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
   return (
     <Box className="player-area">
-      <NowPlayingCard title={nowPlaying.title} videoId={nowPlaying.videoId} />
+      <NowPlayingCard
+        title={nowPlaying.title}
+        videoId={nowPlaying.videoId}
+        positionInQueue={currentIndex >= 0 ? currentIndex + 1 : undefined}
+        queueLength={queueLength}
+      />
       <Group gap="xs" my="md" wrap="wrap">
         <Button onClick={onPrev} disabled={!queueLength} aria-label="Previous">
           <IconPlayerSkipBack size={16} />
@@ -41,6 +61,9 @@ export function PlayerArea({
           aria-label="Toggle loop"
         >
           <IconRepeat size={16} />
+        </Button>
+        <Button onClick={handleCopyLink} disabled={!nowPlaying?.videoId} aria-label="Copy link">
+          {copied ? 'Copied' : (<><IconLink size={16} style={{ marginRight: 8 }} />Copy link</>)}
         </Button>
       </Group>
 
