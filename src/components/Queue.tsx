@@ -1,4 +1,4 @@
-import { Badge, Box, Card, Group, ScrollArea, Text, TextInput } from '@mantine/core';
+import { Badge, Box, Card, Checkbox, Group, ScrollArea, Text, TextInput } from '@mantine/core';
 import { useEffect, useMemo, useState } from 'react';
 import type { VideoItem } from '../types';
 import copyTextToClipboard from '../utils/util';
@@ -15,6 +15,7 @@ type QueueProps = {
 
 export function Queue({ queue, currentIndex, onPlayIndex, onRemoveIndex, isDarkMode }: QueueProps) {
   const [searchQuery, setSearchQuery] = useState('');
+  const [useRegexSearch, setUseRegexSearch] = useState(false);
   const [contextMenu, setContextMenu] = useState<{
     visible: boolean;
     x: number;
@@ -27,12 +28,28 @@ export function Queue({ queue, currentIndex, onPlayIndex, onRemoveIndex, isDarkM
     const query = searchQuery.trim().toLowerCase();
     const indexedQueue = queue.map((item, index) => ({ item, index }));
     if (!query) return indexedQueue;
+
+    let titleRegex: RegExp | null = null;
+    if (useRegexSearch) {
+      try {
+        titleRegex = new RegExp(searchQuery.trim(), 'i');
+      } catch {
+        titleRegex = null;
+      }
+    }
+
     return indexedQueue.filter(({ item }) => {
-      const title = (item.title || '').toLowerCase();
+      const rawTitle = item.title || '';
+      const title = rawTitle.toLowerCase();
       const videoId = (item.videoId || '').toLowerCase();
+
+      if (titleRegex) {
+        return titleRegex.test(rawTitle);
+      }
+
       return title.includes(query) || videoId.includes(query);
     });
-  }, [queue, searchQuery]);
+  }, [queue, searchQuery, useRegexSearch]);
 
   useEffect(() => {
     if (currentIndex == null || currentIndex < 0) return;
@@ -75,6 +92,12 @@ export function Queue({ queue, currentIndex, onPlayIndex, onRemoveIndex, isDarkM
               <Text fw={700}>Queue</Text>
               <Badge variant="light">{queue.length}</Badge>
             </Group>
+            <Checkbox
+              label="Regex"
+              size="xs"
+              checked={useRegexSearch}
+              onChange={(event) => setUseRegexSearch(event.currentTarget.checked)}
+            />
           </Group>
           <TextInput
             placeholder="Search queue by title or video ID"
