@@ -15,7 +15,7 @@
     "prettier": "prettier --write . --config .prettierrc"
   },
   "dependencies": {
-    "@mantine/core": "^9.2.0",
+    "@mantine/core": "^9.2.1",
     "@mantine/hooks": "^9",
     "@tabler/icons-react": "^3.44.0",
     "@tauri-apps/api": "^2.11.0",
@@ -24,20 +24,20 @@
     "prettier": "^3.8.3",
     "react": "^19.2.6",
     "react-dom": "^19.2.6",
-    "react-router-dom": "^7.15.0",
+    "react-router-dom": "^7.15.1",
     "zustand": "^5.0.13"
   },
   "devDependencies": {
     "@playwright/test": "^1.60.0",
-    "@tauri-apps/cli": "^2.11.1",
-    "@types/node": "^25.7.0",
+    "@tauri-apps/cli": "^2.11.2",
+    "@types/node": "^25.8.0",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
-    "@vitejs/plugin-react": "^6.0.1",
+    "@vitejs/plugin-react": "^6.0.2",
     "jsdom": "^29.1.1",
     "playwright": "^1.51.2",
     "typescript": "~6.0.2",
-    "vite": "^8.0.12",
+    "vite": "^8.0.13",
     "vitest": "^4.1.6"
   }
 }
