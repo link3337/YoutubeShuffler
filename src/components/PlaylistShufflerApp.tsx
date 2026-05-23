@@ -1,6 +1,6 @@
 import { Box } from '@mantine/core';
 import { open } from '@tauri-apps/plugin-dialog';
-import { useCallback, useEffect, useRef, type ChangeEvent } from 'react';
+import { useCallback, useEffect, useRef, useState, type ChangeEvent } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import '../App.css';
 import {
@@ -21,6 +21,14 @@ import {
   uniqueBy
 } from '../utils/playlist';
 import { safeInvoke } from '../utils/tauri';
+import {
+  canUseWebNowPlayingFileOutput,
+  clearWebNowPlayingFileHandle,
+  loadWebNowPlayingFileHandle,
+  pickWebNowPlayingFile,
+  saveWebNowPlayingFileHandle,
+  writeToWebNowPlayingFile
+} from '../utils/webNowPlayingFile';
 import { useTwitchRequests } from './hooks/useTwitchRequests';
 import { PlayerQueueSection } from './PlayerQueueSection';
 
@@ -91,6 +99,7 @@ export type PlaylistShufflerOutletContext = {
   disconnectTwitchChat: () => void;
   nowPlayingFolder: string;
   nowPlayingFilePath: string;
+  isWebNowPlayingMode: boolean;
   nowPlayingTemplate: string;
   handleNowPlayingTemplateChange: (value: string) => void;
   handleResetNowPlayingTemplate: () => void;
@@ -104,6 +113,10 @@ export default function PlaylistShufflerApp({
 }: PlaylistShufflerAppProps) {
   const location = useLocation();
   const isSettingsRoute = location.pathname.toLowerCase() === '/settings';
+  const isTauriRuntime =
+    typeof window !== 'undefined' &&
+    Boolean((window as { __TAURI_INTERNALS__?: unknown }).__TAURI_INTERNALS__);
+  const isWebNowPlayingMode = !isTauriRuntime;
 
   const manualInput = usePlaylistStore((state) => state.manualInput);
   const setManualInput = usePlaylistStore((state) => state.setManualInput);
@@ -149,6 +162,8 @@ export default function PlaylistShufflerApp({
   const nowPlayingRef = useRef(nowPlaying);
   const loopCurrentSongRef = useRef(loopCurrentSong);
   const userRequestCountsRef = useRef<Record<string, number>>({});
+  const webNowPlayingFileHandleRef = useRef<FileSystemFileHandle | null>(null);
+  const [webNowPlayingFileLabel, setWebNowPlayingFileLabel] = useState('Not selected');
 
   const fileInputYtdlpRef = useRef<HTMLInputElement | null>(null);
   const fileInputHtmlRef = useRef<HTMLInputElement | null>(null);
@@ -173,6 +188,31 @@ export default function PlaylistShufflerApp({
   useEffect(() => {
     initializeNowPlayingTemplate();
   }, [initializeNowPlayingTemplate]);
+
+  useEffect(() => {
+    if (!isWebNowPlayingMode) {
+      return;
+    }
+
+    let cancelled = false;
+    void (async () => {
+      try {
+        const handle = await loadWebNowPlayingFileHandle();
+        if (cancelled || !handle) {
+          return;
+        }
+
+        webNowPlayingFileHandleRef.current = handle;
+        setWebNowPlayingFileLabel(handle.name || 'Selected local file');
+      } catch {
+        // Ignore IndexedDB read failures.
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isWebNowPlayingMode]);
 
   const applyNowPlayingTemplate = useCallback((template: string, title: string) => {
     const sanitizedTitle = sanitizeTitleForTextFile(title || '');
@@ -212,6 +252,17 @@ export default function PlaylistShufflerApp({
       if (item) {
         try {
           const renderedTitle = applyNowPlayingTemplate(nowPlayingTemplate, item.title || '');
+          if (isWebNowPlayingMode) {
+            const handle = webNowPlayingFileHandleRef.current;
+            if (!handle) {
+              updateMessage('Choose a local now playing output file in Settings first.');
+              return;
+            }
+
+            await writeToWebNowPlayingFile(handle, `${renderedTitle}\n`);
+            return;
+          }
+
           await safeInvoke('write_now_playing', {
             title: renderedTitle,
             path: outPath
@@ -221,7 +272,14 @@ export default function PlaylistShufflerApp({
         }
       }
     },
-    [applyNowPlayingTemplate, nowPlayingFolder, nowPlayingTemplate, resolveNowPlayingPath, updateMessage]
+    [
+      applyNowPlayingTemplate,
+      isWebNowPlayingMode,
+      nowPlayingFolder,
+      nowPlayingTemplate,
+      resolveNowPlayingPath,
+      updateMessage
+    ]
   );
 
   const playIndex = useCallback(
@@ -461,6 +519,26 @@ export default function PlaylistShufflerApp({
   }, []);
 
   const handleChooseNowPlayingFolder = useCallback(async () => {
+    if (isWebNowPlayingMode) {
+      try {
+        if (!canUseWebNowPlayingFileOutput()) {
+          updateMessage(
+            'Local file output is unavailable here. Use Chrome/Edge over HTTPS (or localhost).'
+          );
+          return;
+        }
+
+        const handle = await pickWebNowPlayingFile();
+        await saveWebNowPlayingFileHandle(handle);
+        webNowPlayingFileHandleRef.current = handle;
+        setWebNowPlayingFileLabel(handle.name || 'Selected local file');
+        updateMessage(`Now playing output file set: ${handle.name}`, true);
+      } catch (error) {
+        updateMessage(`Unable to choose local output file: ${String(error)}`);
+      }
+      return;
+    }
+
     try {
       const selected = await open({
         directory: true,
@@ -477,12 +555,20 @@ export default function PlaylistShufflerApp({
     } catch (error) {
       updateMessage(`Unable to choose folder: ${String(error)}`);
     }
-  }, [nowPlayingFolder, setNowPlayingFolderAndPersist, updateMessage]);
+  }, [isWebNowPlayingMode, nowPlayingFolder, setNowPlayingFolderAndPersist, updateMessage]);
 
   const handleClearNowPlayingFolder = useCallback(() => {
+    if (isWebNowPlayingMode) {
+      webNowPlayingFileHandleRef.current = null;
+      setWebNowPlayingFileLabel('Not selected');
+      void clearWebNowPlayingFileHandle();
+      updateMessage('Local now playing output file cleared.', true);
+      return;
+    }
+
     clearNowPlayingFolderAndPersist();
     updateMessage('Now playing folder reset to default app path.', true);
-  }, [clearNowPlayingFolderAndPersist, updateMessage]);
+  }, [clearNowPlayingFolderAndPersist, isWebNowPlayingMode, updateMessage]);
 
   const handleNowPlayingTemplateChange = useCallback(
     (value: string) => {
@@ -677,7 +763,10 @@ export default function PlaylistShufflerApp({
     connectTwitchChat,
     disconnectTwitchChat,
     nowPlayingFolder,
-    nowPlayingFilePath: resolveNowPlayingPath(nowPlayingFolder),
+    nowPlayingFilePath: isWebNowPlayingMode
+      ? webNowPlayingFileLabel
+      : resolveNowPlayingPath(nowPlayingFolder),
+    isWebNowPlayingMode,
     nowPlayingTemplate,
     handleNowPlayingTemplateChange,
     handleResetNowPlayingTemplate,

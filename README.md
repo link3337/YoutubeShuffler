@@ -48,3 +48,18 @@ or
 ```
 !songrequest dQw4w9WgXcQ
 ```
+
+## Hosted Website + OBS text file output
+
+You can use this app from a hosted website and still write a local `current_song.txt` for OBS.
+
+1. Open the hosted app in Chrome or Edge.
+2. Go to **Settings** > **Now Playing Output**.
+3. Click **Choose local output file** and pick (or create) your local `.txt` file.
+4. In OBS, add a Text source that reads from that same file path.
+5. Start playback in the app; the selected file will be updated per song.
+
+Notes:
+- This requires HTTPS (or localhost) because browsers only allow local file access in secure contexts.
+- If browser permission is revoked, choose the file again.
+- Tauri desktop mode still uses the folder-based output behavior.

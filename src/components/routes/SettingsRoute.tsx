@@ -13,6 +13,7 @@ export default function SettingsRoute() {
     disconnectTwitchChat,
     nowPlayingFolder,
     nowPlayingFilePath,
+    isWebNowPlayingMode,
     nowPlayingTemplate,
     handleNowPlayingTemplateChange,
     handleResetNowPlayingTemplate,
@@ -39,6 +40,7 @@ export default function SettingsRoute() {
         <NowPlayingOutputCard
           nowPlayingFolder={nowPlayingFolder}
           nowPlayingFilePath={nowPlayingFilePath}
+          isWebNowPlayingMode={isWebNowPlayingMode}
           nowPlayingTemplate={nowPlayingTemplate}
           onNowPlayingTemplateChange={handleNowPlayingTemplateChange}
           onResetNowPlayingTemplate={handleResetNowPlayingTemplate}

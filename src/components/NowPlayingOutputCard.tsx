@@ -3,6 +3,7 @@ import { Button, Card, Code, Group, Stack, Text, TextInput } from '@mantine/core
 type NowPlayingOutputCardProps = {
   nowPlayingFolder: string;
   nowPlayingFilePath: string;
+  isWebNowPlayingMode: boolean;
   nowPlayingTemplate: string;
   onNowPlayingTemplateChange: (value: string) => void;
   onResetNowPlayingTemplate: () => void;
@@ -13,6 +14,7 @@ type NowPlayingOutputCardProps = {
 export function NowPlayingOutputCard({
   nowPlayingFolder,
   nowPlayingFilePath,
+  isWebNowPlayingMode,
   nowPlayingTemplate,
   onNowPlayingTemplateChange,
   onResetNowPlayingTemplate,
@@ -27,20 +29,26 @@ export function NowPlayingOutputCard({
         </Text>
         <Group gap="xs" wrap="wrap">
           <Button variant="default" onClick={onChooseNowPlayingFolder}>
-            Choose now playing folder
+            {isWebNowPlayingMode ? 'Choose local output file' : 'Choose now playing folder'}
           </Button>
           <Button
             variant="subtle"
             color="gray"
             onClick={onClearNowPlayingFolder}
-            disabled={!nowPlayingFolder}
+            disabled={isWebNowPlayingMode ? nowPlayingFilePath === 'Not selected' : !nowPlayingFolder}
           >
-            Use default
+            {isWebNowPlayingMode ? 'Clear local file' : 'Use default'}
           </Button>
         </Group>
         <Text size="xs" c="dimmed" style={{ overflowWrap: 'anywhere' }}>
-          <b>Output file:</b> <Code>{nowPlayingFilePath}</Code>
+          <b>{isWebNowPlayingMode ? 'Selected file:' : 'Output file:'}</b>{' '}
+          <Code>{nowPlayingFilePath}</Code>
         </Text>
+        {isWebNowPlayingMode ? (
+          <Text size="xs" c="dimmed">
+            Hosted web mode writes directly to the file you choose here, so OBS can read it.
+          </Text>
+        ) : null}
 
         <TextInput
           label="Now playing template"
