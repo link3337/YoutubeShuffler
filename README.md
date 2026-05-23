@@ -25,6 +25,8 @@ yt-dlp --flat-playlist -J "PLAYLIST_URL" > playlist.json
 4. On the permissions/scopes page, make sure these are checked:
 	- `chat:read`
 	- `chat:edit`
+	- `user:read:chat`
+	- `user:write:chat`
 5. Approve the authorization request.
 6. Copy the generated token (it usually looks like `oauth:xxxxxxxx...`).
 7. In this app's **Twitch song requests** card:
@@ -35,7 +37,7 @@ yt-dlp --flat-playlist -J "PLAYLIST_URL" > playlist.json
 Notes:
 - Keep this token private. It can post/read chat as that account.
 - If your token does not start with `oauth:`, prepend `oauth:` before pasting.
-- If connect fails, generate a new token and verify both scopes are selected.
+- If connect fails, generate a new token and verify all scopes are selected.
 
 ```
 !sr https://www.youtube.com/watch?v=dQw4w9WgXcQ
