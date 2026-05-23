@@ -91,6 +91,9 @@ export type PlaylistShufflerOutletContext = {
   disconnectTwitchChat: () => void;
   nowPlayingFolder: string;
   nowPlayingFilePath: string;
+  nowPlayingTemplate: string;
+  handleNowPlayingTemplateChange: (value: string) => void;
+  handleResetNowPlayingTemplate: () => void;
   handleChooseNowPlayingFolder: () => void;
   handleClearNowPlayingFolder: () => void;
 };
@@ -116,11 +119,19 @@ export default function PlaylistShufflerApp({
   const nowPlaying = usePlaylistStore(selectNowPlaying);
   const setNowPlaying = usePlaylistStore((state) => state.setNowPlaying);
   const nowPlayingFolder = usePlaylistStore((state) => state.nowPlayingFolder);
+  const nowPlayingTemplate = usePlaylistStore((state) => state.nowPlayingTemplate);
   const updateMessage = usePlaylistStore((state) => state.updateMessage);
   const resetPlaylistState = usePlaylistStore((state) => state.resetPlaylistState);
   const initializeNowPlayingFolder = usePlaylistStore((state) => state.initializeNowPlayingFolder);
+  const initializeNowPlayingTemplate = usePlaylistStore((state) => state.initializeNowPlayingTemplate);
   const setNowPlayingFolderAndPersist = usePlaylistStore(
     (state) => state.setNowPlayingFolderAndPersist
+  );
+  const setNowPlayingTemplateAndPersist = usePlaylistStore(
+    (state) => state.setNowPlayingTemplateAndPersist
+  );
+  const resetNowPlayingTemplateAndPersist = usePlaylistStore(
+    (state) => state.resetNowPlayingTemplateAndPersist
   );
   const clearNowPlayingFolderAndPersist = usePlaylistStore(
     (state) => state.clearNowPlayingFolderAndPersist
@@ -160,6 +171,20 @@ export default function PlaylistShufflerApp({
   }, [initializeNowPlayingFolder]);
 
   useEffect(() => {
+    initializeNowPlayingTemplate();
+  }, [initializeNowPlayingTemplate]);
+
+  const applyNowPlayingTemplate = useCallback((template: string, title: string) => {
+    const sanitizedTitle = sanitizeTitleForTextFile(title || '');
+    const normalizedTemplate = (template || '<title>').replace(/[\r\n]+/g, ' ').trim();
+    const templated = normalizedTemplate.includes('<title>')
+      ? normalizedTemplate.split('<title>').join(sanitizedTitle)
+      : `${normalizedTemplate} ${sanitizedTitle}`;
+
+    return sanitizeTitleForTextFile(templated);
+  }, []);
+
+  useEffect(() => {
     queueRef.current = queue;
   }, [queue]);
 
@@ -186,8 +211,9 @@ export default function PlaylistShufflerApp({
 
       if (item) {
         try {
+          const renderedTitle = applyNowPlayingTemplate(nowPlayingTemplate, item.title || '');
           await safeInvoke('write_now_playing', {
-            title: sanitizeTitleForTextFile(item.title || ''),
+            title: renderedTitle,
             path: outPath
           });
         } catch (error) {
@@ -195,7 +221,7 @@ export default function PlaylistShufflerApp({
         }
       }
     },
-    [nowPlayingFolder, resolveNowPlayingPath, updateMessage]
+    [applyNowPlayingTemplate, nowPlayingFolder, nowPlayingTemplate, resolveNowPlayingPath, updateMessage]
   );
 
   const playIndex = useCallback(
@@ -458,6 +484,18 @@ export default function PlaylistShufflerApp({
     updateMessage('Now playing folder reset to default app path.', true);
   }, [clearNowPlayingFolderAndPersist, updateMessage]);
 
+  const handleNowPlayingTemplateChange = useCallback(
+    (value: string) => {
+      setNowPlayingTemplateAndPersist(value);
+    },
+    [setNowPlayingTemplateAndPersist]
+  );
+
+  const handleResetNowPlayingTemplate = useCallback(() => {
+    resetNowPlayingTemplateAndPersist();
+    updateMessage('Now playing template reset to default.', true);
+  }, [resetNowPlayingTemplateAndPersist, updateMessage]);
+
   const handleImportHtml = useCallback(() => {
     fileInputHtmlRef.current?.click();
   }, []);
@@ -640,6 +678,9 @@ export default function PlaylistShufflerApp({
     disconnectTwitchChat,
     nowPlayingFolder,
     nowPlayingFilePath: resolveNowPlayingPath(nowPlayingFolder),
+    nowPlayingTemplate,
+    handleNowPlayingTemplateChange,
+    handleResetNowPlayingTemplate,
     handleChooseNowPlayingFolder,
     handleClearNowPlayingFolder
   };

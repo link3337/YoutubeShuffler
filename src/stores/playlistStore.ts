@@ -10,7 +10,9 @@ const DEFAULT_NOW_PLAYING: NowPlaying = {
 };
 const STORAGE_KEY = 'ytpl_last';
 const NOW_PLAYING_FOLDER_STORAGE_KEY = 'ytpl_now_playing_folder';
+const NOW_PLAYING_TEMPLATE_STORAGE_KEY = 'ytpl_now_playing_template';
 const LOOP_CURRENT_SONG_STORAGE_KEY = 'ytpl_loop_current_song';
+const DEFAULT_NOW_PLAYING_TEMPLATE = '<title>';
 
 const readLoopCurrentSongPreference = (): boolean => {
   try {
@@ -29,6 +31,7 @@ type PlaylistStoreState = {
   message: MessageState | null;
   nowPlaying: NowPlaying;
   nowPlayingFolder: string;
+  nowPlayingTemplate: string;
   setManualInput: (value: string) => void;
   setQueue: (value: VideoItem[]) => void;
   setCurrentIndex: (value: number) => void;
@@ -37,8 +40,12 @@ type PlaylistStoreState = {
   updateMessage: (text: string, ok?: boolean) => void;
   setNowPlaying: (value: NowPlaying) => void;
   setNowPlayingFolder: (value: string) => void;
+  setNowPlayingTemplate: (value: string) => void;
   initializeNowPlayingFolder: () => void;
+  initializeNowPlayingTemplate: () => void;
   setNowPlayingFolderAndPersist: (value: string) => void;
+  setNowPlayingTemplateAndPersist: (value: string) => void;
+  resetNowPlayingTemplateAndPersist: () => void;
   clearNowPlayingFolderAndPersist: () => void;
   saveQueueSession: (queue: VideoItem[], currentIndex: number) => void;
   restoreQueueSession: () => SavedQueueSession | null;
@@ -55,6 +62,7 @@ export const usePlaylistStore = create<PlaylistStoreState>()((set) => ({
   message: null,
   nowPlaying: DEFAULT_NOW_PLAYING,
   nowPlayingFolder: '',
+  nowPlayingTemplate: DEFAULT_NOW_PLAYING_TEMPLATE,
   setManualInput: (value) => set({ manualInput: value }),
   setQueue: (value) => set({ queue: value }),
   setCurrentIndex: (value) => set({ currentIndex: value }),
@@ -70,6 +78,7 @@ export const usePlaylistStore = create<PlaylistStoreState>()((set) => ({
   updateMessage: (text, ok = false) => set({ message: text ? { text, ok } : null }),
   setNowPlaying: (value) => set({ nowPlaying: value }),
   setNowPlayingFolder: (value) => set({ nowPlayingFolder: value }),
+  setNowPlayingTemplate: (value) => set({ nowPlayingTemplate: value }),
   initializeNowPlayingFolder: () => {
     try {
       const stored = localStorage.getItem(NOW_PLAYING_FOLDER_STORAGE_KEY);
@@ -80,10 +89,37 @@ export const usePlaylistStore = create<PlaylistStoreState>()((set) => ({
       // Ignore localStorage failures.
     }
   },
+  initializeNowPlayingTemplate: () => {
+    try {
+      const stored = localStorage.getItem(NOW_PLAYING_TEMPLATE_STORAGE_KEY);
+      if (stored) {
+        set({ nowPlayingTemplate: stored });
+      }
+    } catch {
+      // Ignore localStorage failures.
+    }
+  },
   setNowPlayingFolderAndPersist: (value) => {
     set({ nowPlayingFolder: value });
     try {
       localStorage.setItem(NOW_PLAYING_FOLDER_STORAGE_KEY, value);
+    } catch {
+      // Ignore localStorage failures.
+    }
+  },
+  setNowPlayingTemplateAndPersist: (value) => {
+    const nextTemplate = value || DEFAULT_NOW_PLAYING_TEMPLATE;
+    set({ nowPlayingTemplate: nextTemplate });
+    try {
+      localStorage.setItem(NOW_PLAYING_TEMPLATE_STORAGE_KEY, nextTemplate);
+    } catch {
+      // Ignore localStorage failures.
+    }
+  },
+  resetNowPlayingTemplateAndPersist: () => {
+    set({ nowPlayingTemplate: DEFAULT_NOW_PLAYING_TEMPLATE });
+    try {
+      localStorage.removeItem(NOW_PLAYING_TEMPLATE_STORAGE_KEY);
     } catch {
       // Ignore localStorage failures.
     }

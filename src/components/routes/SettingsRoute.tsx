@@ -13,6 +13,9 @@ export default function SettingsRoute() {
     disconnectTwitchChat,
     nowPlayingFolder,
     nowPlayingFilePath,
+    nowPlayingTemplate,
+    handleNowPlayingTemplateChange,
+    handleResetNowPlayingTemplate,
     handleChooseNowPlayingFolder,
     handleClearNowPlayingFolder
   } = useOutletContext<PlaylistShufflerOutletContext>();
@@ -36,6 +39,9 @@ export default function SettingsRoute() {
         <NowPlayingOutputCard
           nowPlayingFolder={nowPlayingFolder}
           nowPlayingFilePath={nowPlayingFilePath}
+          nowPlayingTemplate={nowPlayingTemplate}
+          onNowPlayingTemplateChange={handleNowPlayingTemplateChange}
+          onResetNowPlayingTemplate={handleResetNowPlayingTemplate}
           onChooseNowPlayingFolder={handleChooseNowPlayingFolder}
           onClearNowPlayingFolder={handleClearNowPlayingFolder}
         />
