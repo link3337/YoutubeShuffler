@@ -1,9 +1,11 @@
+import { invoke } from '@tauri-apps/api/core';
+
 export const safeInvoke = async <T>(command: string, args?: Record<string, unknown>) => {
   if (typeof window === 'undefined') {
     return undefined as T | undefined;
   }
 
-  const tauriInvoke = (
+  const legacyTauriInvoke = (
     window as {
       __TAURI__?: {
         core?: { invoke?: (cmd: string, args?: Record<string, unknown>) => Promise<T> };
@@ -11,9 +13,17 @@ export const safeInvoke = async <T>(command: string, args?: Record<string, unkno
     }
   ).__TAURI__?.core?.invoke;
 
-  if (!tauriInvoke) {
+  const hasTauriRuntime =
+    Boolean((window as { __TAURI_INTERNALS__?: unknown }).__TAURI_INTERNALS__) ||
+    Boolean(legacyTauriInvoke);
+
+  if (!hasTauriRuntime) {
     return undefined as T | undefined;
   }
 
-  return tauriInvoke(command, args);
+  if (legacyTauriInvoke) {
+    return legacyTauriInvoke(command, args);
+  }
+
+  return invoke<T>(command, args);
 };
