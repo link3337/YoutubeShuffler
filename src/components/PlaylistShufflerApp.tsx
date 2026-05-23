@@ -24,8 +24,10 @@ import { safeInvoke } from '../utils/tauri';
 import {
   canUseWebNowPlayingFileOutput,
   clearWebNowPlayingFileHandle,
+  getWebNowPlayingFilePermission,
   loadWebNowPlayingFileHandle,
   pickWebNowPlayingFile,
+  requestWebNowPlayingFilePermission,
   saveWebNowPlayingFileHandle,
   writeToWebNowPlayingFile
 } from '../utils/webNowPlayingFile';
@@ -101,10 +103,12 @@ export type PlaylistShufflerOutletContext = {
   nowPlayingFilePath: string;
   isWebNowPlayingMode: boolean;
   nowPlayingTemplate: string;
+  needsWebNowPlayingReauth: boolean;
   handleNowPlayingTemplateChange: (value: string) => void;
   handleResetNowPlayingTemplate: () => void;
   handleChooseNowPlayingFolder: () => void;
   handleClearNowPlayingFolder: () => void;
+  handleReauthorizeWebNowPlayingFile: () => void;
 };
 
 export default function PlaylistShufflerApp({
@@ -136,7 +140,9 @@ export default function PlaylistShufflerApp({
   const updateMessage = usePlaylistStore((state) => state.updateMessage);
   const resetPlaylistState = usePlaylistStore((state) => state.resetPlaylistState);
   const initializeNowPlayingFolder = usePlaylistStore((state) => state.initializeNowPlayingFolder);
-  const initializeNowPlayingTemplate = usePlaylistStore((state) => state.initializeNowPlayingTemplate);
+  const initializeNowPlayingTemplate = usePlaylistStore(
+    (state) => state.initializeNowPlayingTemplate
+  );
   const setNowPlayingFolderAndPersist = usePlaylistStore(
     (state) => state.setNowPlayingFolderAndPersist
   );
@@ -164,6 +170,7 @@ export default function PlaylistShufflerApp({
   const userRequestCountsRef = useRef<Record<string, number>>({});
   const webNowPlayingFileHandleRef = useRef<FileSystemFileHandle | null>(null);
   const [webNowPlayingFileLabel, setWebNowPlayingFileLabel] = useState('Not selected');
+  const [needsWebNowPlayingReauth, setNeedsWebNowPlayingReauth] = useState(false);
 
   const fileInputYtdlpRef = useRef<HTMLInputElement | null>(null);
   const fileInputHtmlRef = useRef<HTMLInputElement | null>(null);
@@ -204,6 +211,8 @@ export default function PlaylistShufflerApp({
 
         webNowPlayingFileHandleRef.current = handle;
         setWebNowPlayingFileLabel(handle.name || 'Selected local file');
+        const permission = await getWebNowPlayingFilePermission(handle);
+        setNeedsWebNowPlayingReauth(permission !== 'granted');
       } catch {
         // Ignore IndexedDB read failures.
       }
@@ -260,6 +269,7 @@ export default function PlaylistShufflerApp({
             }
 
             await writeToWebNowPlayingFile(handle, `${renderedTitle}\n`);
+            setNeedsWebNowPlayingReauth(false);
             return;
           }
 
@@ -532,6 +542,8 @@ export default function PlaylistShufflerApp({
         await saveWebNowPlayingFileHandle(handle);
         webNowPlayingFileHandleRef.current = handle;
         setWebNowPlayingFileLabel(handle.name || 'Selected local file');
+        const permission = await requestWebNowPlayingFilePermission(handle);
+        setNeedsWebNowPlayingReauth(permission !== 'granted');
         updateMessage(`Now playing output file set: ${handle.name}`, true);
       } catch (error) {
         updateMessage(`Unable to choose local output file: ${String(error)}`);
@@ -561,6 +573,7 @@ export default function PlaylistShufflerApp({
     if (isWebNowPlayingMode) {
       webNowPlayingFileHandleRef.current = null;
       setWebNowPlayingFileLabel('Not selected');
+      setNeedsWebNowPlayingReauth(false);
       void clearWebNowPlayingFileHandle();
       updateMessage('Local now playing output file cleared.', true);
       return;
@@ -581,6 +594,34 @@ export default function PlaylistShufflerApp({
     resetNowPlayingTemplateAndPersist();
     updateMessage('Now playing template reset to default.', true);
   }, [resetNowPlayingTemplateAndPersist, updateMessage]);
+
+  const handleReauthorizeWebNowPlayingFile = useCallback(() => {
+    if (!isWebNowPlayingMode) {
+      return;
+    }
+
+    const handle = webNowPlayingFileHandleRef.current;
+    if (!handle) {
+      updateMessage('Choose a local now playing output file first.');
+      return;
+    }
+
+    void (async () => {
+      try {
+        const permission = await requestWebNowPlayingFilePermission(handle);
+        const granted = permission === 'granted';
+        setNeedsWebNowPlayingReauth(!granted);
+        if (granted) {
+          updateMessage('Local file access re-authorized.', true);
+          return;
+        }
+
+        updateMessage('File access was not granted.');
+      } catch (error) {
+        updateMessage(`Could not re-authorize file access: ${String(error)}`);
+      }
+    })();
+  }, [isWebNowPlayingMode, updateMessage]);
 
   const handleImportHtml = useCallback(() => {
     fileInputHtmlRef.current?.click();
@@ -768,10 +809,12 @@ export default function PlaylistShufflerApp({
       : resolveNowPlayingPath(nowPlayingFolder),
     isWebNowPlayingMode,
     nowPlayingTemplate,
+    needsWebNowPlayingReauth,
     handleNowPlayingTemplateChange,
     handleResetNowPlayingTemplate,
     handleChooseNowPlayingFolder,
-    handleClearNowPlayingFolder
+    handleClearNowPlayingFolder,
+    handleReauthorizeWebNowPlayingFile
   };
 
   return (

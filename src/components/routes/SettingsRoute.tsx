@@ -15,10 +15,12 @@ export default function SettingsRoute() {
     nowPlayingFilePath,
     isWebNowPlayingMode,
     nowPlayingTemplate,
+    needsWebNowPlayingReauth,
     handleNowPlayingTemplateChange,
     handleResetNowPlayingTemplate,
     handleChooseNowPlayingFolder,
-    handleClearNowPlayingFolder
+    handleClearNowPlayingFolder,
+    handleReauthorizeWebNowPlayingFile
   } = useOutletContext<PlaylistShufflerOutletContext>();
 
   return (
@@ -42,10 +44,12 @@ export default function SettingsRoute() {
           nowPlayingFilePath={nowPlayingFilePath}
           isWebNowPlayingMode={isWebNowPlayingMode}
           nowPlayingTemplate={nowPlayingTemplate}
+          needsWebNowPlayingReauth={needsWebNowPlayingReauth}
           onNowPlayingTemplateChange={handleNowPlayingTemplateChange}
           onResetNowPlayingTemplate={handleResetNowPlayingTemplate}
           onChooseNowPlayingFolder={handleChooseNowPlayingFolder}
           onClearNowPlayingFolder={handleClearNowPlayingFolder}
+          onReauthorizeWebNowPlayingFile={handleReauthorizeWebNowPlayingFile}
         />
       </Stack>
     </>

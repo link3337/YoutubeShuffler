@@ -23,18 +23,19 @@ yt-dlp --flat-playlist -J "PLAYLIST_URL" > playlist.json
 2. Under **Bot Chat Token**, click **Generate Token**.
 3. Sign in with the Twitch account you want the app to use in chat.
 4. On the permissions/scopes page, make sure these are checked:
-	- `chat:read`
-	- `chat:edit`
-	- `user:read:chat`
-	- `user:write:chat`
+   - `chat:read`
+   - `chat:edit`
+   - `user:read:chat`
+   - `user:write:chat`
 5. Approve the authorization request.
 6. Copy the generated token (it usually looks like `oauth:xxxxxxxx...`).
 7. In this app's **Twitch song requests** card:
-	- Set your Twitch channel/user name.
-	- Paste the token into the OAuth token field.
-	- Click **Connect**.
+   - Set your Twitch channel/user name.
+   - Paste the token into the OAuth token field.
+   - Click **Connect**.
 
 Notes:
+
 - Keep this token private. It can post/read chat as that account.
 - If your token does not start with `oauth:`, prepend `oauth:` before pasting.
 - If connect fails, generate a new token and verify all scopes are selected.
@@ -60,6 +61,7 @@ You can use this app from a hosted website and still write a local `current_song
 5. Start playback in the app; the selected file will be updated per song.
 
 Notes:
+
 - This requires HTTPS (or localhost) because browsers only allow local file access in secure contexts.
 - If browser permission is revoked, choose the file again.
 - Tauri desktop mode still uses the folder-based output behavior.
