@@ -167,6 +167,9 @@ export default function PlaylistShufflerApp({
   const pendingPlayIndexRef = useRef<number | null>(null);
   const nowPlayingRef = useRef(nowPlaying);
   const loopCurrentSongRef = useRef(loopCurrentSong);
+  const playIndexHandlerRef = useRef<(index: number) => void>(() => { });
+  const nextVideoHandlerRef = useRef<() => void>(() => { });
+  const failedVideoIdsRef = useRef<Set<string>>(new Set());
   const userRequestCountsRef = useRef<Record<string, number>>({});
   const webNowPlayingFileHandleRef = useRef<FileSystemFileHandle | null>(null);
   const [webNowPlayingFileLabel, setWebNowPlayingFileLabel] = useState('Not selected');
@@ -235,6 +238,14 @@ export default function PlaylistShufflerApp({
 
   useEffect(() => {
     queueRef.current = queue;
+
+    // Prune failed IDs that no longer exist in the queue.
+    const queueIds = new Set(queue.map((item) => item.videoId).filter((id): id is string => Boolean(id)));
+    for (const failedId of failedVideoIdsRef.current) {
+      if (!queueIds.has(failedId)) {
+        failedVideoIdsRef.current.delete(failedId);
+      }
+    }
   }, [queue]);
 
   useEffect(() => {
@@ -330,14 +341,43 @@ export default function PlaylistShufflerApp({
     [reportNowPlaying, saveQueueSession]
   );
 
+  const findAdjacentPlayableIndex = useCallback(
+    (startIndex: number, direction: 1 | -1): number => {
+      const currentQueue = queueRef.current;
+      const total = currentQueue.length;
+      if (!total) {
+        return -1;
+      }
+
+      for (let step = 1; step <= total; step += 1) {
+        const candidate = (startIndex + direction * step + total) % total;
+        const videoId = currentQueue[candidate]?.videoId ?? '';
+        if (!videoId) {
+          continue;
+        }
+        if (!failedVideoIdsRef.current.has(videoId)) {
+          return candidate;
+        }
+      }
+
+      return -1;
+    },
+    []
+  );
+
   const nextVideo = useCallback(() => {
     const currentQueue = queueRef.current;
     if (!currentQueue.length) {
       return;
     }
-    const next = (currentIndexRef.current + 1) % currentQueue.length;
+
+    const next = findAdjacentPlayableIndex(currentIndexRef.current, 1);
+    if (next < 0) {
+      updateMessage('No playable videos available in queue.');
+      return;
+    }
     playIndex(next);
-  }, [playIndex]);
+  }, [findAdjacentPlayableIndex, playIndex, updateMessage]);
 
   const previousVideo = useCallback(() => {
     const currentQueue = queueRef.current;
@@ -345,9 +385,21 @@ export default function PlaylistShufflerApp({
       return;
     }
 
-    const prev = (currentIndexRef.current - 1 + currentQueue.length) % currentQueue.length;
+    const prev = findAdjacentPlayableIndex(currentIndexRef.current, -1);
+    if (prev < 0) {
+      updateMessage('No playable videos available in queue.');
+      return;
+    }
     playIndex(prev);
+  }, [findAdjacentPlayableIndex, playIndex, updateMessage]);
+
+  useEffect(() => {
+    playIndexHandlerRef.current = playIndex;
   }, [playIndex]);
+
+  useEffect(() => {
+    nextVideoHandlerRef.current = nextVideo;
+  }, [nextVideo]);
 
   const reshuffleKeepCurrent = useCallback(() => {
     const currentQueue = queueRef.current;
@@ -473,21 +525,28 @@ export default function PlaylistShufflerApp({
             const pendingIndex = pendingPlayIndexRef.current;
             if (pendingIndex !== null && queueRef.current.length) {
               pendingPlayIndexRef.current = null;
-              playIndex(Math.min(Math.max(pendingIndex, 0), queueRef.current.length - 1));
+              playIndexHandlerRef.current(
+                Math.min(Math.max(pendingIndex, 0), queueRef.current.length - 1)
+              );
             }
           },
           onStateChange: (event) => {
             if (event.data === window.YT?.PlayerState.ENDED) {
               if (loopCurrentSongRef.current && currentIndexRef.current >= 0) {
-                playIndex(currentIndexRef.current);
+                playIndexHandlerRef.current(currentIndexRef.current);
                 return;
               }
-              nextVideo();
+              nextVideoHandlerRef.current();
             }
           },
           onError: () => {
-            console.log('Error playing video, skipping to next.');
-            nextVideo();
+            const failedItem = queueRef.current[currentIndexRef.current];
+            const failedVideoId = failedItem?.videoId ?? '';
+            if (failedVideoId) {
+              failedVideoIdsRef.current.add(failedVideoId);
+            }
+            console.log('Error playing video, skipping to next playable.');
+            nextVideoHandlerRef.current();
           }
         }
       });
@@ -702,6 +761,7 @@ export default function PlaylistShufflerApp({
     resetPlaylistState();
     updateMessage('Cleared.', true);
     pendingPlayIndexRef.current = null;
+    failedVideoIdsRef.current.clear();
     userRequestCountsRef.current = {};
     clearQueueSession();
   }, [clearQueueSession, resetPlaylistState, updateMessage]);
