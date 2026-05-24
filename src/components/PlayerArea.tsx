@@ -65,7 +65,7 @@ export function PlayerArea({
           aria-pressed={loopCurrentSong}
           aria-label="Toggle loop"
         >
-          <IconRepeat size={16} />
+          <IconRepeat size={16} style={{ marginRight: 8 }} /> Loop
         </Button>
         <Button onClick={handleCopyLink} disabled={!nowPlaying?.videoId} aria-label="Copy link">
           {copied ? (
