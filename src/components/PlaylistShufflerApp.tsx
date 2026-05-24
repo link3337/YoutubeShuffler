@@ -407,14 +407,13 @@ export default function PlaylistShufflerApp({
       return;
     }
 
-    const currentVideoId = currentQueue[currentIndexRef.current]?.videoId;
     const shuffled = fisherYatesShuffle([...currentQueue]);
-    const newIndex = shuffled.findIndex((item) => item.videoId === currentVideoId);
-
+    queueRef.current = shuffled;
     setQueue(shuffled);
-    setCurrentIndex(newIndex >= 0 ? newIndex : 0);
+    setCurrentIndex(0);
+    playIndex(0);
     updateMessage('Reshuffled.', true);
-  }, [updateMessage]);
+  }, [playIndex, updateMessage]);
 
   const setQueueAndPlay = useCallback(
     (items: VideoItem[], sourceLabel: string) => {
