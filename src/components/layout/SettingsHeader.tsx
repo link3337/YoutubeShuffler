@@ -1,6 +1,10 @@
-import { Group, Paper, Text, Title } from '@mantine/core';
+import { Button, Group, Paper, Text, Title } from '@mantine/core';
 
-export default function SettingsHeader() {
+type SettingsHeaderProps = {
+  onOpenFaq: () => void;
+};
+
+export default function SettingsHeader({ onOpenFaq }: SettingsHeaderProps) {
   return (
     <Paper withBorder radius="xl" p="lg" className="panel">
       <Group justify="space-between" align="flex-start" gap="md" wrap="wrap">
@@ -10,6 +14,9 @@ export default function SettingsHeader() {
           </Title>
           <Text c="dimmed">Configure Twitch song requests, theme, and other options.</Text>
         </div>
+        <Button variant="default" onClick={onOpenFaq}>
+          FAQ
+        </Button>
       </Group>
     </Paper>
   );

@@ -1,11 +1,15 @@
 import { Stack, Switch } from '@mantine/core';
+import { useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
+import { FaqModal } from '../FaqModal';
 import { NowPlayingOutputCard } from '../NowPlayingOutputCard';
 import type { PlaylistShufflerOutletContext } from '../PlaylistShufflerApp';
 import { TwitchRequestCard } from '../TwitchRequestCard';
 import SettingsHeader from '../layout/SettingsHeader';
 
 export default function SettingsRoute() {
+  const [faqOpened, setFaqOpened] = useState(false);
+
   const {
     isDarkMode,
     onToggleTheme,
@@ -25,7 +29,7 @@ export default function SettingsRoute() {
 
   return (
     <>
-      <SettingsHeader />
+      <SettingsHeader onOpenFaq={() => setFaqOpened(true)} />
       <Stack gap="md" mt="md">
         <Switch
           size="md"
@@ -52,6 +56,7 @@ export default function SettingsRoute() {
           onReauthorizeWebNowPlayingFile={handleReauthorizeWebNowPlayingFile}
         />
       </Stack>
+      <FaqModal opened={faqOpened} onClose={() => setFaqOpened(false)} />
     </>
   );
 }

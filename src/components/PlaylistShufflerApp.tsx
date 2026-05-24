@@ -116,7 +116,7 @@ export default function PlaylistShufflerApp({
   onToggleTheme
 }: PlaylistShufflerAppProps) {
   const location = useLocation();
-  const isSettingsRoute = location.pathname.toLowerCase() === '/settings';
+  const isHomeRoute = location.pathname.toLowerCase() === '/home';
   const isTauriRuntime =
     typeof window !== 'undefined' &&
     Boolean((window as { __TAURI_INTERNALS__?: unknown }).__TAURI_INTERNALS__);
@@ -821,7 +821,7 @@ export default function PlaylistShufflerApp({
     <>
       <Outlet context={outletContext} />
 
-      <Box mt="md" style={isSettingsRoute ? { display: 'none' } : undefined}>
+      <Box mt="md" style={!isHomeRoute ? { display: 'none' } : undefined}>
         <PlayerQueueSection
           nowPlaying={nowPlaying}
           playerRef={playerContainerRef}

@@ -1,4 +1,4 @@
-import { Button, Card, Code, Group, Stack, Text } from '@mantine/core';
+import { Anchor, Button, Card, Code, Group, Stack, Text } from '@mantine/core';
 
 type ImportCardProps = {
   hasQueue: boolean;
@@ -42,7 +42,10 @@ export function ImportCard({
         </Group>
 
         <Text size="xs" c="dimmed">
-          <b>Recommended:</b> generate playlist.json via
+          <b>Recommended:</b> generate playlist.json via{' '}
+          <Anchor href="https://github.com/yt-dlp/yt-dlp" target="_blank" rel="noreferrer">
+            yt-dlp
+          </Anchor>
           <br />
           <Code>yt-dlp --flat-playlist -J "PLAYLIST_URL" &gt; playlist.json</Code>
         </Text>

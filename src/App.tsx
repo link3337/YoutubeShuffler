@@ -6,7 +6,7 @@ import {
   useComputedColorScheme,
   useMantineColorScheme
 } from '@mantine/core';
-import { IconHome, IconSettings } from '@tabler/icons-react';
+import { IconHome, IconInfoCircle, IconSettings } from '@tabler/icons-react';
 import { Link, useLocation } from 'react-router-dom';
 import AppRoutes from './components/AppRoutes';
 import Footer from './components/layout/Footer';
@@ -16,7 +16,10 @@ function App() {
   const computedColorScheme = useComputedColorScheme('dark', { getInitialValueInEffect: true });
 
   const location = useLocation();
-  const isHomeRoute = location.pathname.toLowerCase() === '/home';
+  const currentPath = location.pathname.toLowerCase();
+  const isHomeRoute = currentPath === '/home';
+  const isSettingsRoute = currentPath === '/settings';
+  const isAboutRoute = currentPath === '/about';
 
   return (
     <AppShell
@@ -44,11 +47,20 @@ function App() {
           <Button
             component={Link}
             to="/settings"
-            variant={!isHomeRoute ? 'light' : 'subtle'}
+            variant={isSettingsRoute ? 'light' : 'subtle'}
             justify="flex-start"
             aria-label="Settings"
           >
             <IconSettings size={18} />
+          </Button>
+          <Button
+            component={Link}
+            to="/about"
+            variant={isAboutRoute ? 'light' : 'subtle'}
+            justify="flex-start"
+            aria-label="About"
+          >
+            <IconInfoCircle size={18} />
           </Button>
         </Stack>
       </AppShell.Navbar>

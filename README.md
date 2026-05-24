@@ -1,5 +1,6 @@
 # Youtube Playlist Shuffler
-Simple app to shuffle youtube playlists
+
+Simple app to shuffle youtube playlists and queue the songs, with some basic twitch chat integration for song requests
 
 ## download [yt-dlp](https://github.com/yt-dlp/yt-dlp#installation)
 
@@ -12,7 +13,7 @@ yt-dlp --flat-playlist -J "PLAYLIST_URL" > playlist.json
 - Open the app and use the **Twitch song requests** card.
 - Generate an OAUTH token and set it, press connect to chat.
 
-### Generate a Twitch token (chat:read + chat:edit)
+### Generate a Twitch token (chat:read + chat:edit + user:read:chat + user:write:chat)
 
 1. Go to https://twitchtokengenerator.com/.
 2. Under **Bot Chat Token**, click **Generate Token**.

@@ -1,5 +1,6 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
 import PlaylistShufflerApp from './PlaylistShufflerApp';
+import AboutRoute from './routes/AboutRoute';
 import HomeRoute from './routes/HomeRoute';
 import SettingsRoute from './routes/SettingsRoute';
 
@@ -17,6 +18,7 @@ export default function AppRoutes({ isDarkMode, onToggleTheme }: AppRoutesProps)
       >
         <Route path="/home" element={<HomeRoute />} />
         <Route path="/settings" element={<SettingsRoute />} />
+        <Route path="/about" element={<AboutRoute />} />
       </Route>
       <Route path="*" element={<Navigate to="/home" replace />} />
     </Routes>
