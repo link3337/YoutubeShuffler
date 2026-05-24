@@ -16,6 +16,7 @@ export default function HomeRoute() {
     status,
     message,
     handleImportYtdlp,
+    handleImportYtdlpById,
     handleImportHtml,
     reshuffleKeepCurrent,
     handleExportQueue,
@@ -30,6 +31,7 @@ export default function HomeRoute() {
         <ImportCard
           hasQueue={queue.length > 0}
           onImportYtdlp={handleImportYtdlp}
+          onImportYtdlpById={handleImportYtdlpById}
           onImportHtml={handleImportHtml}
           onReshuffle={reshuffleKeepCurrent}
           onExportQueue={handleExportQueue}

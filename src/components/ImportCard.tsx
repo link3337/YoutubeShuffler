@@ -1,8 +1,10 @@
-import { Anchor, Button, Card, Code, Group, Stack, Text } from '@mantine/core';
+import { Anchor, Button, Card, Code, Group, Stack, Text, TextInput } from '@mantine/core';
+import { useState } from 'react';
 
 type ImportCardProps = {
   hasQueue: boolean;
   onImportYtdlp: () => void;
+  onImportYtdlpById: (playlistInput: string) => void;
   onImportHtml: () => void;
   onReshuffle: () => void;
   onExportQueue: () => void;
@@ -12,10 +14,13 @@ type ImportCardProps = {
 export function ImportCard({
   hasQueue,
   onImportYtdlp,
+  onImportYtdlpById,
   onImportHtml,
   onReshuffle,
   onExportQueue
 }: ImportCardProps) {
+  const [playlistInput, setPlaylistInput] = useState('');
+
   return (
     <Card withBorder radius="md">
       <Stack gap="sm">
@@ -29,6 +34,23 @@ export function ImportCard({
           </Button>
           <Button variant="light" onClick={onImportHtml}>
             Import playlist page source <Code>.html</Code>
+          </Button>
+        </Group>
+
+        <Group gap="xs" align="end" wrap="wrap">
+          <TextInput
+            label="YouTube playlist ID or URL"
+            placeholder="PL... or https://www.youtube.com/playlist?list=..."
+            value={playlistInput}
+            onChange={(event) => setPlaylistInput(event.currentTarget.value)}
+            style={{ minWidth: 320, flex: 1 }}
+          />
+          <Button
+            variant="light"
+            disabled={!playlistInput.trim()}
+            onClick={() => onImportYtdlpById(playlistInput)}
+          >
+            Auto-import via yt-dlp
           </Button>
         </Group>
 

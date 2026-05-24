@@ -89,6 +89,7 @@ export type PlaylistShufflerOutletContext = {
   playerContainerRef: React.RefObject<HTMLDivElement | null>;
   playIndex: (index: number) => void;
   handleImportYtdlp: () => void;
+  handleImportYtdlpById: (playlistInput: string) => void;
   handleImportHtml: () => void;
   previousVideo: () => void;
   nextVideo: () => void;
@@ -594,6 +595,35 @@ export default function PlaylistShufflerApp({
     fileInputYtdlpRef.current?.click();
   }, []);
 
+  const handleImportYtdlpById = useCallback(
+    async (playlistInput: string) => {
+      const input = playlistInput.trim();
+      if (!input) {
+        updateMessage('Enter a playlist ID or URL first.');
+        return;
+      }
+
+      try {
+        updateMessage('');
+        setStatus('Fetching playlist via yt-dlp...');
+        const text = await safeInvoke<string>('fetch_ytdlp_playlist_json', {
+          playlistInput: input
+        });
+
+        if (!text) {
+          throw new Error('yt-dlp import is available in Tauri desktop mode only.');
+        }
+
+        const items = parseYtDlpJson(text);
+        setQueueAndPlay(items, 'yt-dlp auto import');
+      } catch (error) {
+        setStatus('');
+        updateMessage(String(error instanceof Error ? error.message : error));
+      }
+    },
+    [setQueueAndPlay, updateMessage]
+  );
+
   const handleChooseNowPlayingFolder = useCallback(async () => {
     if (isWebNowPlayingMode) {
       try {
@@ -859,6 +889,7 @@ export default function PlaylistShufflerApp({
     playerContainerRef,
     playIndex,
     handleImportYtdlp,
+    handleImportYtdlpById,
     handleImportHtml,
     previousVideo,
     nextVideo,
