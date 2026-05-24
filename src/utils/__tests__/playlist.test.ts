@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import {
   extractVideoIdFromLine,
   fisherYatesShuffle,
+  isPrivateVideoTitle,
   parsePlaylistHtml,
   parseYtDlpJson,
   sanitizeTitleForTextFile,
@@ -48,6 +49,12 @@ describe('playlist utils', () => {
 
   it('sanitizeTitleForTextFile trims and normalizes spaces', () => {
     expect(sanitizeTitleForTextFile('  Song   Title  ')).toBe('Song Title');
+  });
+
+  it('isPrivateVideoTitle treats private and deleted placeholders as unavailable', () => {
+    expect(isPrivateVideoTitle('[Private video]')).toBe(true);
+    expect(isPrivateVideoTitle('[Deleted video]')).toBe(true);
+    expect(isPrivateVideoTitle('Regular song title')).toBe(false);
   });
 
   it('parseYtDlpJson parses playlist entries', () => {

@@ -1,4 +1,4 @@
-import { Stack, Switch } from '@mantine/core';
+import { Stack, Switch, Text } from '@mantine/core';
 import { useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { FaqModal } from '../FaqModal';
@@ -55,6 +55,13 @@ export default function SettingsRoute() {
           onClearNowPlayingFolder={handleClearNowPlayingFolder}
           onReauthorizeWebNowPlayingFile={handleReauthorizeWebNowPlayingFile}
         />
+
+        {isWebNowPlayingMode && (
+          <Text size="xs" c="dimmed">
+            Browser media keys are best-effort. Play/pause usually works, but next/previous may be
+            limited by Chrome/OS media focus or another active media app/tab.
+          </Text>
+        )}
       </Stack>
       <FaqModal opened={faqOpened} onClose={() => setFaqOpened(false)} />
     </>

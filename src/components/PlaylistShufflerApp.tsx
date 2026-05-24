@@ -1,4 +1,5 @@
 import { Box } from '@mantine/core';
+import { listen } from '@tauri-apps/api/event';
 import { open } from '@tauri-apps/plugin-dialog';
 import { useCallback, useEffect, useRef, useState, type ChangeEvent } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
@@ -40,6 +41,9 @@ const MAX_REQUESTS_PER_USER = 5;
 
 type YTPlayerInstance = {
   loadVideoById: (args: { videoId: string }) => void;
+  playVideo?: () => void;
+  pauseVideo?: () => void;
+  getPlayerState?: () => number;
 };
 
 type YTPlayerReadyEvent = {
@@ -60,6 +64,7 @@ type YTNamespace = {
     }
   ) => YTPlayerInstance;
   PlayerState: {
+    PLAYING: number;
     ENDED: number;
   };
 };
@@ -394,6 +399,21 @@ export default function PlaylistShufflerApp({
     playIndex(prev);
   }, [findAdjacentPlayableIndex, playIndex, updateMessage]);
 
+  const togglePause = useCallback(() => {
+    const player = playerRef.current;
+    if (!player || !queueRef.current.length) {
+      return;
+    }
+
+    const playerState = player.getPlayerState?.();
+    if (playerState === window.YT?.PlayerState.PLAYING) {
+      player.pauseVideo?.();
+      return;
+    }
+
+    player.playVideo?.();
+  }, []);
+
   useEffect(() => {
     playIndexHandlerRef.current = playIndex;
   }, [playIndex]);
@@ -401,6 +421,197 @@ export default function PlaylistShufflerApp({
   useEffect(() => {
     nextVideoHandlerRef.current = nextVideo;
   }, [nextVideo]);
+
+  useEffect(() => {
+    if (typeof navigator === 'undefined' || !('mediaSession' in navigator)) {
+      return;
+    }
+
+    if (!isWebNowPlayingMode) {
+      return;
+    }
+
+    const mediaSession = navigator.mediaSession;
+
+    const setActionHandler = (
+      action: MediaSessionAction,
+      handler: MediaSessionActionHandler | null
+    ) => {
+      try {
+        mediaSession.setActionHandler(action, handler);
+      } catch {
+        // Some browsers/platforms do not support all actions.
+      }
+    };
+
+    setActionHandler('nexttrack', () => {
+      nextVideo();
+    });
+    setActionHandler('previoustrack', () => {
+      previousVideo();
+    });
+    // Some media keyboards map skip buttons to seek actions in browsers.
+    setActionHandler('seekforward', () => {
+      nextVideo();
+    });
+    setActionHandler('seekbackward', () => {
+      previousVideo();
+    });
+    setActionHandler('play', () => {
+      const playerState = playerRef.current?.getPlayerState?.();
+      if (playerState !== window.YT?.PlayerState.PLAYING) {
+        togglePause();
+      }
+    });
+    setActionHandler('pause', () => {
+      const playerState = playerRef.current?.getPlayerState?.();
+      if (playerState === window.YT?.PlayerState.PLAYING) {
+        togglePause();
+      }
+    });
+
+    return () => {
+      setActionHandler('nexttrack', null);
+      setActionHandler('previoustrack', null);
+      setActionHandler('seekforward', null);
+      setActionHandler('seekbackward', null);
+      setActionHandler('play', null);
+      setActionHandler('pause', null);
+    };
+  }, [isWebNowPlayingMode, nextVideo, previousVideo, togglePause]);
+
+  useEffect(() => {
+    if (typeof navigator === 'undefined' || !('mediaSession' in navigator)) {
+      return;
+    }
+
+    if (!isWebNowPlayingMode) {
+      return;
+    }
+
+    const mediaSession = navigator.mediaSession;
+    const hasVideo = Boolean(nowPlaying.videoId);
+    const title = nowPlaying.title || '(nothing)';
+
+    mediaSession.metadata = new MediaMetadata({
+      title,
+      artist: 'YouTube Playlist Shuffler',
+      album: 'Queue',
+      artwork: []
+    });
+
+    if (!hasVideo) {
+      mediaSession.playbackState = 'none';
+      return;
+    }
+
+    const playerState = playerRef.current?.getPlayerState?.();
+    mediaSession.playbackState =
+      playerState === window.YT?.PlayerState.PLAYING ? 'playing' : 'paused';
+  }, [isWebNowPlayingMode, nowPlaying]);
+
+  useEffect(() => {
+    const hasTauriRuntime =
+      typeof window !== 'undefined' &&
+      Boolean((window as { __TAURI_INTERNALS__?: unknown }).__TAURI_INTERNALS__);
+
+    if (!hasTauriRuntime) {
+      return;
+    }
+
+    const unlistenCallbacks: Array<() => void> = [];
+    let disposed = false;
+
+    void (async () => {
+      try {
+        const [unlistenNext, unlistenPrevious, unlistenPlayPause] = await Promise.all([
+          listen('global-media-next', () => {
+            nextVideo();
+          }),
+          listen('global-media-previous', () => {
+            previousVideo();
+          }),
+          listen('global-media-play-pause', () => {
+            togglePause();
+          })
+        ]);
+
+        if (disposed) {
+          unlistenNext();
+          unlistenPrevious();
+          unlistenPlayPause();
+          return;
+        }
+
+        unlistenCallbacks.push(unlistenNext, unlistenPrevious, unlistenPlayPause);
+      } catch (error) {
+        console.warn('Failed to subscribe to global media shortcuts', error);
+      }
+    })();
+
+    return () => {
+      disposed = true;
+      for (const unlistenCallback of unlistenCallbacks) {
+        unlistenCallback();
+      }
+    };
+  }, [nextVideo, previousVideo, togglePause]);
+
+  useEffect(() => {
+    const isTypingElement = (element: EventTarget | null): boolean => {
+      if (!(element instanceof HTMLElement)) {
+        return false;
+      }
+
+      if (element.isContentEditable) {
+        return true;
+      }
+
+      const tag = element.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') {
+        return true;
+      }
+
+      return Boolean(element.closest('[contenteditable="true"], [role="textbox"]'));
+    };
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      const key = event.key;
+      const code = event.code;
+
+      if (key === 'MediaTrackNext' || code === 'MediaTrackNext') {
+        event.preventDefault();
+        nextVideo();
+        return;
+      }
+
+      if (key === 'MediaTrackPrevious' || code === 'MediaTrackPrevious') {
+        event.preventDefault();
+        previousVideo();
+        return;
+      }
+
+      if (code !== 'Space' && key !== ' ') {
+        return;
+      }
+
+      if (event.repeat || event.ctrlKey || event.metaKey || event.altKey || event.shiftKey) {
+        return;
+      }
+
+      if (isTypingElement(event.target)) {
+        return;
+      }
+
+      event.preventDefault();
+      togglePause();
+    };
+
+    window.addEventListener('keydown', onKeyDown);
+    return () => {
+      window.removeEventListener('keydown', onKeyDown);
+    };
+  }, [nextVideo, previousVideo, togglePause]);
 
   const reshuffleKeepCurrent = useCallback(() => {
     const currentQueue = queueRef.current;
@@ -432,7 +643,7 @@ export default function PlaylistShufflerApp({
       setStatus(`${sourceLabel}: loaded ${cleaned.length} videos. Shuffled + playing.`);
       updateMessage(
         filteredPrivateCount > 0
-          ? `Loaded successfully. Filtered out ${filteredPrivateCount} private video(s).`
+          ? `Loaded successfully. Filtered out ${filteredPrivateCount} unavailable video(s).`
           : 'Loaded successfully.',
         true
       );
