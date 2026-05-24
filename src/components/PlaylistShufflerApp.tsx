@@ -15,6 +15,7 @@ import {
   downloadJson,
   extractVideoIdFromLine,
   fisherYatesShuffle,
+  isPrivateVideoTitle,
   parsePlaylistHtml,
   parseYtDlpJson,
   sanitizeTitleForTextFile,
@@ -417,7 +418,9 @@ export default function PlaylistShufflerApp({
 
   const setQueueAndPlay = useCallback(
     (items: VideoItem[], sourceLabel: string) => {
-      const cleaned = uniqueBy(items, (item) => item.videoId);
+      const withoutPrivate = items.filter((item) => !isPrivateVideoTitle(item.title));
+      const filteredPrivateCount = items.length - withoutPrivate.length;
+      const cleaned = uniqueBy(withoutPrivate, (item) => item.videoId);
       if (!cleaned.length) {
         throw new Error('No playable items found.');
       }
@@ -427,7 +430,12 @@ export default function PlaylistShufflerApp({
       setQueue(shuffled);
       setCurrentIndex(0);
       setStatus(`${sourceLabel}: loaded ${cleaned.length} videos. Shuffled + playing.`);
-      updateMessage('Loaded successfully.', true);
+      updateMessage(
+        filteredPrivateCount > 0
+          ? `Loaded successfully. Filtered out ${filteredPrivateCount} private video(s).`
+          : 'Loaded successfully.',
+        true
+      );
 
       if (playerRef.current) {
         playIndex(0);

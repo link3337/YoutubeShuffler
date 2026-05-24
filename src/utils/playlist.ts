@@ -56,6 +56,11 @@ export function sanitizeTitleForTextFile(title: string): string {
   return String(title).replace(/\s+/g, ' ').trim();
 }
 
+export function isPrivateVideoTitle(title: string | null | undefined): boolean {
+  const normalized = sanitizeTitleForTextFile(String(title ?? '')).toLowerCase();
+  return normalized === '[private video]' || normalized === 'private video';
+}
+
 export function parseYtDlpJson(text: string): VideoItem[] {
   const data = JSON.parse(text) as {
     entries?: Array<{ id?: string; url?: string; title?: string } | null>;
