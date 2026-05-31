@@ -14,6 +14,7 @@ type PlayerQueueSectionProps = {
   currentIndex: number;
   onPlayIndex: (index: number) => void;
   onRemoveIndex: (index: number) => void;
+  onRemoveAllRequests: () => void;
   onPrev: () => void;
   onNext: () => void;
   loopCurrentSong: boolean;
@@ -28,6 +29,7 @@ export function PlayerQueueSection({
   currentIndex,
   onPlayIndex,
   onRemoveIndex,
+  onRemoveAllRequests,
   onPrev,
   onNext,
   loopCurrentSong,
@@ -52,6 +54,7 @@ export function PlayerQueueSection({
         currentIndex={currentIndex}
         onPlayIndex={onPlayIndex}
         onRemoveIndex={onRemoveIndex}
+        onRemoveAllRequests={onRemoveAllRequests}
         isDarkMode={isDarkMode}
       />
     </SimpleGrid>

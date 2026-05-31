@@ -38,6 +38,11 @@ import { PlayerQueueSection } from './PlayerQueueSection';
 
 const NOW_PLAYING_FILE_NAME = 'current_song.txt';
 const MAX_REQUESTS_PER_USER = 5;
+const REQUEST_TITLE_PATTERN = /^\[Request by [^\]]+\]\s+/i;
+
+function isRequestQueueItem(item: VideoItem): boolean {
+  return REQUEST_TITLE_PATTERN.test((item.title || '').trim());
+}
 
 type YTPlayerInstance = {
   loadVideoById: (args: { videoId: string }) => void;
@@ -173,8 +178,8 @@ export default function PlaylistShufflerApp({
   const pendingPlayIndexRef = useRef<number | null>(null);
   const nowPlayingRef = useRef(nowPlaying);
   const loopCurrentSongRef = useRef(loopCurrentSong);
-  const playIndexHandlerRef = useRef<(index: number) => void>(() => { });
-  const nextVideoHandlerRef = useRef<() => void>(() => { });
+  const playIndexHandlerRef = useRef<(index: number) => void>(() => {});
+  const nextVideoHandlerRef = useRef<() => void>(() => {});
   const failedVideoIdsRef = useRef<Set<string>>(new Set());
   const userRequestCountsRef = useRef<Record<string, number>>({});
   const webNowPlayingFileHandleRef = useRef<FileSystemFileHandle | null>(null);
@@ -246,7 +251,9 @@ export default function PlaylistShufflerApp({
     queueRef.current = queue;
 
     // Prune failed IDs that no longer exist in the queue.
-    const queueIds = new Set(queue.map((item) => item.videoId).filter((id): id is string => Boolean(id)));
+    const queueIds = new Set(
+      queue.map((item) => item.videoId).filter((id): id is string => Boolean(id))
+    );
     for (const failedId of failedVideoIdsRef.current) {
       if (!queueIds.has(failedId)) {
         failedVideoIdsRef.current.delete(failedId);
@@ -347,29 +354,26 @@ export default function PlaylistShufflerApp({
     [reportNowPlaying, saveQueueSession]
   );
 
-  const findAdjacentPlayableIndex = useCallback(
-    (startIndex: number, direction: 1 | -1): number => {
-      const currentQueue = queueRef.current;
-      const total = currentQueue.length;
-      if (!total) {
-        return -1;
-      }
-
-      for (let step = 1; step <= total; step += 1) {
-        const candidate = (startIndex + direction * step + total) % total;
-        const videoId = currentQueue[candidate]?.videoId ?? '';
-        if (!videoId) {
-          continue;
-        }
-        if (!failedVideoIdsRef.current.has(videoId)) {
-          return candidate;
-        }
-      }
-
+  const findAdjacentPlayableIndex = useCallback((startIndex: number, direction: 1 | -1): number => {
+    const currentQueue = queueRef.current;
+    const total = currentQueue.length;
+    if (!total) {
       return -1;
-    },
-    []
-  );
+    }
+
+    for (let step = 1; step <= total; step += 1) {
+      const candidate = (startIndex + direction * step + total) % total;
+      const videoId = currentQueue[candidate]?.videoId ?? '';
+      if (!videoId) {
+        continue;
+      }
+      if (!failedVideoIdsRef.current.has(videoId)) {
+        return candidate;
+      }
+    }
+
+    return -1;
+  }, []);
 
   const nextVideo = useCallback(() => {
     const currentQueue = queueRef.current;
@@ -658,7 +662,7 @@ export default function PlaylistShufflerApp({
   );
 
   const queueSongRequest = useCallback(
-    (videoId: string, requestedBy: string): boolean => {
+    (videoId: string, requestedBy: string): { accepted: boolean; reason?: string } => {
       const requesterKey = (requestedBy || '').trim().toLowerCase();
       const currentUserCount = requesterKey ? (userRequestCountsRef.current[requesterKey] ?? 0) : 0;
       if (requesterKey && currentUserCount >= MAX_REQUESTS_PER_USER) {
@@ -666,13 +670,19 @@ export default function PlaylistShufflerApp({
           `Request ignored: ${requestedBy} reached the ${MAX_REQUESTS_PER_USER} song limit.`,
           true
         );
-        return false;
+        return {
+          accepted: false,
+          reason: `you reached the ${MAX_REQUESTS_PER_USER} song request limit.`
+        };
       }
 
       const currentQueue = queueRef.current;
       if (currentQueue.some((item) => item.videoId === videoId)) {
         updateMessage(`Ignored duplicate request (${videoId}) from ${requestedBy}.`);
-        return false;
+        return {
+          accepted: false,
+          reason: 'that song is already in the queue.'
+        };
       }
 
       const requestedItem: VideoItem = {
@@ -701,12 +711,12 @@ export default function PlaylistShufflerApp({
         } else {
           pendingPlayIndexRef.current = 0;
         }
-        return true;
+        return { accepted: true };
       }
 
       saveQueueSession(nextQueue, currentIndexRef.current);
 
-      return true;
+      return { accepted: true };
     },
     [playIndex, saveQueueSession, updateMessage]
   );
@@ -1041,6 +1051,71 @@ export default function PlaylistShufflerApp({
     ]
   );
 
+  const removeAllRequestedSongs = useCallback(() => {
+    const currentQueue = queueRef.current;
+    if (!currentQueue.length) {
+      return;
+    }
+
+    const requestIndices: number[] = [];
+    for (let index = 0; index < currentQueue.length; index += 1) {
+      if (isRequestQueueItem(currentQueue[index])) {
+        requestIndices.push(index);
+      }
+    }
+
+    if (!requestIndices.length) {
+      updateMessage('No song requests found in queue.', true);
+      return;
+    }
+
+    const requestIndexSet = new Set(requestIndices);
+    const nextQueue = currentQueue.filter((_, idx) => !requestIndexSet.has(idx));
+    queueRef.current = nextQueue;
+
+    if (!nextQueue.length) {
+      setQueue([]);
+      setCurrentIndex(-1);
+      setNowPlaying({ title: '(nothing)', videoId: '' });
+      clearQueueSession();
+      setStatus('Queue is empty.');
+      updateMessage(`Removed ${requestIndices.length} request song(s).`, true);
+      return;
+    }
+
+    const previousCurrent = currentIndexRef.current;
+    const removedBeforeCurrent = requestIndices.filter((idx) => idx < previousCurrent).length;
+    const removedCurrent = requestIndexSet.has(previousCurrent);
+
+    if (removedCurrent) {
+      const nextIndex = Math.min(previousCurrent - removedBeforeCurrent, nextQueue.length - 1);
+      setQueue(nextQueue);
+      setCurrentIndex(nextIndex);
+      saveQueueSession(nextQueue, nextIndex);
+      playIndex(nextIndex);
+      updateMessage(
+        `Removed ${requestIndices.length} request song(s). Current request was removed, continued playback.`,
+        true
+      );
+      return;
+    }
+
+    const nextIndex = Math.max(0, previousCurrent - removedBeforeCurrent);
+    setQueue(nextQueue);
+    setCurrentIndex(nextIndex);
+    saveQueueSession(nextQueue, nextIndex);
+    updateMessage(`Removed ${requestIndices.length} request song(s).`, true);
+  }, [
+    clearQueueSession,
+    playIndex,
+    saveQueueSession,
+    setCurrentIndex,
+    setNowPlaying,
+    setQueue,
+    setStatus,
+    updateMessage
+  ]);
+
   const handleExportQueue = useCallback(() => {
     if (!queue.length) {
       return;
@@ -1107,6 +1182,7 @@ export default function PlaylistShufflerApp({
           currentIndex={currentIndex}
           onPlayIndex={playIndex}
           onRemoveIndex={removeQueueItem}
+          onRemoveAllRequests={removeAllRequestedSongs}
           onPrev={previousVideo}
           onNext={nextVideo}
           loopCurrentSong={loopCurrentSong}

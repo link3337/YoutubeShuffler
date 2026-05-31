@@ -6,7 +6,10 @@ import { extractChatMessageFromIrcLine, extractRequestedVideoId } from '../../ut
 type UseTwitchRequestsArgs = {
   updateMessage: (text: string, ok?: boolean) => void;
   setStatus: (text: string) => void;
-  queueSongRequest: (videoId: string, requestedBy: string) => boolean;
+  queueSongRequest: (
+    videoId: string,
+    requestedBy: string
+  ) => { accepted: boolean; reason?: string };
   getCurrentSong: () => { title: string; videoId: string };
 };
 
@@ -64,11 +67,38 @@ export function useTwitchRequests({
       const accessToken = normalizedToken.toLowerCase().startsWith('oauth:')
         ? normalizedToken.slice(6)
         : normalizedToken;
+      const normalizedChannel = channelName.trim().replace(/^#/, '').toLowerCase();
+      const sanitizedText = text
+        .replace(/[\r\n]+/g, ' ')
+        .trim()
+        .slice(0, 450);
 
       if (!accessToken) {
         updateMessage('Cannot send message: missing OAuth token.');
         return;
       }
+
+      if (!normalizedChannel) {
+        updateMessage('Cannot send message: missing Twitch channel.');
+        return;
+      }
+
+      if (!sanitizedText) {
+        return;
+      }
+
+      const ircSocket = twitchSocketRef.current;
+      updateMessage(
+        `[twitch-debug] sending chat message to #${normalizedChannel}: ${sanitizedText}`
+      );
+      if (ircSocket && ircSocket.readyState === WebSocket.OPEN) {
+        // Prefer IRC send path when connected; this works with standard chat OAuth scopes.
+        ircSocket.send(`PRIVMSG #${normalizedChannel} :${sanitizedText}`);
+        updateMessage('[twitch-debug] sent via IRC PRIVMSG.', true);
+        return;
+      }
+
+      updateMessage('[twitch-debug] IRC socket not open, attempting Helix fallback.');
 
       try {
         const validateResponse = await fetch('https://id.twitch.tv/oauth2/validate', {
@@ -98,11 +128,11 @@ export function useTwitchRequests({
         }
 
         let broadcasterId = '';
-        if (validation.login?.toLowerCase() === channelName.toLowerCase()) {
+        if (validation.login?.toLowerCase() === normalizedChannel) {
           broadcasterId = validation.user_id;
         } else {
           const userLookupResponse = await fetch(
-            `https://api.twitch.tv/helix/users?login=${encodeURIComponent(channelName)}`,
+            `https://api.twitch.tv/helix/users?login=${encodeURIComponent(normalizedChannel)}`,
             {
               headers: {
                 Authorization: `Bearer ${accessToken}`,
@@ -135,7 +165,7 @@ export function useTwitchRequests({
           body: JSON.stringify({
             broadcaster_id: broadcasterId,
             sender_id: validation.user_id,
-            message: text
+            message: sanitizedText
           })
         });
 
@@ -151,6 +181,8 @@ export function useTwitchRequests({
             dropReason || sendPayload.message || 'Twitch rejected channel message send.'
           );
         }
+
+        updateMessage('[twitch-debug] sent via Helix chat/messages.', true);
       } catch (error) {
         updateMessage(`Could not send channel message: ${String(error)}`);
       }
@@ -167,6 +199,11 @@ export function useTwitchRequests({
 
     const cleanedUsername = twitchUsername.trim().toLowerCase();
     const normalizedToken = twitchOauthToken.trim();
+    const oauthTokenForIrc = normalizedToken
+      ? normalizedToken.toLowerCase().startsWith('oauth:')
+        ? normalizedToken
+        : `oauth:${normalizedToken}`
+      : '';
     const shadowbannedUsersSet = new Set(
       parseListLines(shadowbannedUsers).map((user) => user.toLowerCase())
     );
@@ -177,10 +214,10 @@ export function useTwitchRequests({
         .filter(Boolean)
     );
 
-    const hasOauth = normalizedToken.toLowerCase().startsWith('oauth:');
-    const anonymousNick = `justinfan${Math.floor(100000 + Math.random() * 900000)}`;
+    const hasOauth = Boolean(oauthTokenForIrc);
+    const anonymousNick = `bingoman${Math.floor(100000 + Math.random() * 900000)}`;
     const nick = cleanedUsername || anonymousNick;
-    const pass = hasOauth ? normalizedToken : 'SCHMOOPIIE';
+    const pass = hasOauth ? oauthTokenForIrc : 'e';
 
     if (twitchSocketRef.current && twitchSocketRef.current.readyState <= WebSocket.OPEN) {
       disconnectTwitchChat();
@@ -224,7 +261,9 @@ export function useTwitchRequests({
           continue;
         }
 
-        if (/^!currentsong\b/i.test(chatMessage.text.trim())) {
+        const trimmedText = chatMessage.text.trim();
+
+        if (/^!currentsong\b/i.test(trimmedText)) {
           const currentSong = getCurrentSong();
           const title = currentSong.title || '(nothing)';
           const videoId = currentSong.videoId;
@@ -235,8 +274,25 @@ export function useTwitchRequests({
           continue;
         }
 
+        const isSongRequestCommand = /^!(?:sr|songrequest)\b/i.test(trimmedText);
+        if (isSongRequestCommand) {
+          const hasRequestArgument = /^!(?:sr|songrequest)\s+.+/i.test(trimmedText);
+          if (!hasRequestArgument && hasOauth) {
+            void sendMessageToTwitchChannel(
+              channel,
+              `@${chatMessage.username} usage: !sr <youtube url or id>`
+            );
+          }
+        }
+
         const requestedVideoId = extractRequestedVideoId(chatMessage.text);
         if (!requestedVideoId) {
+          if (isSongRequestCommand && hasOauth) {
+            void sendMessageToTwitchChannel(
+              channel,
+              `@${chatMessage.username} could not parse that YouTube URL/ID.`
+            );
+          }
           continue;
         }
 
@@ -249,12 +305,27 @@ export function useTwitchRequests({
           updateMessage(
             `Blocked blacklisted song request (${requestedVideoId}) from ${chatMessage.username}.`
           );
+          if (hasOauth) {
+            void sendMessageToTwitchChannel(
+              channel,
+              `@${chatMessage.username} that song is blacklisted and cannot be requested.`
+            );
+          }
           continue;
         }
 
-        const accepted = queueSongRequest(requestedVideoId, chatMessage.username);
-        if (accepted) {
+        const result = queueSongRequest(requestedVideoId, chatMessage.username);
+        if (result.accepted) {
           incrementRequestCount();
+          if (hasOauth) {
+            void sendMessageToTwitchChannel(
+              channel,
+              `@${chatMessage.username} song request successfully added.`
+            );
+          }
+        } else if (hasOauth) {
+          const reason = result.reason || 'request could not be added.';
+          void sendMessageToTwitchChannel(channel, `@${chatMessage.username} ${reason}`);
         }
       }
     };

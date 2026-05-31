@@ -1,4 +1,14 @@
-import { Badge, Box, Card, Checkbox, Group, ScrollArea, Text, TextInput } from '@mantine/core';
+import {
+  Badge,
+  Box,
+  Button,
+  Card,
+  Checkbox,
+  Group,
+  ScrollArea,
+  Text,
+  TextInput
+} from '@mantine/core';
 import { useEffect, useMemo, useState } from 'react';
 import type { VideoItem } from '../types';
 import copyTextToClipboard from '../utils/util';
@@ -10,10 +20,24 @@ type QueueProps = {
   currentIndex: number;
   onPlayIndex: (index: number) => void;
   onRemoveIndex: (index: number) => void;
+  onRemoveAllRequests: () => void;
   isDarkMode?: boolean;
 };
 
-export function Queue({ queue, currentIndex, onPlayIndex, onRemoveIndex, isDarkMode }: QueueProps) {
+const REQUEST_ITEM_PATTERN = /^\[Request by [^\]]+\]\s+/i;
+
+function isRequestItem(item: VideoItem): boolean {
+  return REQUEST_ITEM_PATTERN.test((item.title || '').trim());
+}
+
+export function Queue({
+  queue,
+  currentIndex,
+  onPlayIndex,
+  onRemoveIndex,
+  onRemoveAllRequests,
+  isDarkMode
+}: QueueProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [useRegexSearch, setUseRegexSearch] = useState(false);
   const [contextMenu, setContextMenu] = useState<{
@@ -50,6 +74,11 @@ export function Queue({ queue, currentIndex, onPlayIndex, onRemoveIndex, isDarkM
       return title.includes(query) || videoId.includes(query);
     });
   }, [queue, searchQuery, useRegexSearch]);
+
+  const requestCount = useMemo(
+    () => queue.reduce((count, item) => (isRequestItem(item) ? count + 1 : count), 0),
+    [queue]
+  );
 
   useEffect(() => {
     if (currentIndex == null || currentIndex < 0) return;
@@ -88,9 +117,21 @@ export function Queue({ queue, currentIndex, onPlayIndex, onRemoveIndex, isDarkM
       <Card withBorder radius="md" p={0} className="queue-card">
         <Box p="xs" pb={0}>
           <Group justify="space-between" align="center" mb="xs">
-            <Group gap="xs">
+            <Group gap="xs" wrap="wrap">
               <Text fw={700}>Queue</Text>
               <Badge variant="light">{queue.length}</Badge>
+              <Badge variant="outline" color="orange">
+                Requests: {requestCount}
+              </Badge>
+              <Button
+                size="compact-xs"
+                variant="light"
+                color="orange"
+                disabled={requestCount === 0}
+                onClick={onRemoveAllRequests}
+              >
+                Remove Requests
+              </Button>
             </Group>
             <Checkbox
               label="Regex"
@@ -127,7 +168,25 @@ export function Queue({ queue, currentIndex, onPlayIndex, onRemoveIndex, isDarkM
                 role="button"
                 tabIndex={0}
               >
-                {index + 1}. {item.title || item.videoId}
+                <Box className="queue-item-row">
+                  <Text span className="queue-item-text">
+                    {index + 1}. {item.title || item.videoId}
+                  </Text>
+                  {isRequestItem(item) && (
+                    <Button
+                      size="compact-xs"
+                      variant="subtle"
+                      color="red"
+                      onClick={(event) => {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        onRemoveIndex(index);
+                      }}
+                    >
+                      Remove
+                    </Button>
+                  )}
+                </Box>
               </Box>
             ))
           ) : (

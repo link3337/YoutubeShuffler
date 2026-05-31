@@ -12,3 +12,16 @@
   flex: 1;
   min-height: 0;
 }
+
+.queue-item-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.queue-item-text {
+  flex: 1;
+  min-width: 0;
+  word-break: break-word;
+}
