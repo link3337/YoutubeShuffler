@@ -15,6 +15,7 @@ type PlayerQueueSectionProps = {
   onPlayIndex: (index: number) => void;
   onRemoveIndex: (index: number) => void;
   onRemoveAllRequests: () => void;
+  twitchConnected: boolean;
   onPrev: () => void;
   onNext: () => void;
   loopCurrentSong: boolean;
@@ -30,6 +31,7 @@ export function PlayerQueueSection({
   onPlayIndex,
   onRemoveIndex,
   onRemoveAllRequests,
+  twitchConnected,
   onPrev,
   onNext,
   loopCurrentSong,
@@ -55,6 +57,7 @@ export function PlayerQueueSection({
         onPlayIndex={onPlayIndex}
         onRemoveIndex={onRemoveIndex}
         onRemoveAllRequests={onRemoveAllRequests}
+        twitchConnected={twitchConnected}
         isDarkMode={isDarkMode}
       />
     </SimpleGrid>

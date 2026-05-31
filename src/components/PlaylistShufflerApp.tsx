@@ -178,8 +178,8 @@ export default function PlaylistShufflerApp({
   const pendingPlayIndexRef = useRef<number | null>(null);
   const nowPlayingRef = useRef(nowPlaying);
   const loopCurrentSongRef = useRef(loopCurrentSong);
-  const playIndexHandlerRef = useRef<(index: number) => void>(() => {});
-  const nextVideoHandlerRef = useRef<() => void>(() => {});
+  const playIndexHandlerRef = useRef<(index: number) => void>(() => { });
+  const nextVideoHandlerRef = useRef<() => void>(() => { });
   const failedVideoIdsRef = useRef<Set<string>>(new Set());
   const userRequestCountsRef = useRef<Record<string, number>>({});
   const webNowPlayingFileHandleRef = useRef<FileSystemFileHandle | null>(null);
@@ -721,7 +721,7 @@ export default function PlaylistShufflerApp({
     [playIndex, saveQueueSession, updateMessage]
   );
 
-  const { connectTwitchChat, disconnectTwitchChat } = useTwitchRequests({
+  const { connectTwitchChat, disconnectTwitchChat, twitchConnected } = useTwitchRequests({
     updateMessage,
     setStatus,
     queueSongRequest,
@@ -1183,6 +1183,7 @@ export default function PlaylistShufflerApp({
           onPlayIndex={playIndex}
           onRemoveIndex={removeQueueItem}
           onRemoveAllRequests={removeAllRequestedSongs}
+          twitchConnected={twitchConnected}
           onPrev={previousVideo}
           onNext={nextVideo}
           loopCurrentSong={loopCurrentSong}

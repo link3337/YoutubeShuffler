@@ -21,6 +21,7 @@ type QueueProps = {
   onPlayIndex: (index: number) => void;
   onRemoveIndex: (index: number) => void;
   onRemoveAllRequests: () => void;
+  twitchConnected: boolean;
   isDarkMode?: boolean;
 };
 
@@ -36,6 +37,7 @@ export function Queue({
   onPlayIndex,
   onRemoveIndex,
   onRemoveAllRequests,
+  twitchConnected,
   isDarkMode
 }: QueueProps) {
   const [searchQuery, setSearchQuery] = useState('');
@@ -120,18 +122,22 @@ export function Queue({
             <Group gap="xs" wrap="wrap">
               <Text fw={700}>Queue</Text>
               <Badge variant="light">{queue.length}</Badge>
-              <Badge variant="outline" color="orange">
-                Requests: {requestCount}
-              </Badge>
-              <Button
-                size="compact-xs"
-                variant="light"
-                color="orange"
-                disabled={requestCount === 0}
-                onClick={onRemoveAllRequests}
-              >
-                Remove Requests
-              </Button>
+              {twitchConnected && (
+                <>
+                  <Badge variant="outline" color="orange">
+                    Requests: {requestCount}
+                  </Badge>
+                  <Button
+                    size="compact-xs"
+                    variant="light"
+                    color="orange"
+                    disabled={requestCount === 0}
+                    onClick={onRemoveAllRequests}
+                  >
+                    Remove Requests
+                  </Button>
+                </>
+              )}
             </Group>
             <Checkbox
               label="Regex"
