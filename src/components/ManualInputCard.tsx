@@ -9,21 +9,25 @@ type ManualInputCardProps = {
 
 export function ManualInputCard({ value, onChange, onLoad, onClear }: ManualInputCardProps) {
   return (
-    <Card withBorder radius="md">
-      <Stack gap="sm">
+    <Card withBorder radius="md" p="sm">
+      <Stack gap="xs">
         <Text size="xs" c="dimmed" fw={500}>
-          Manual: paste video IDs (or URLs) — one per line
+          Manual: paste video IDs (or URLs) - one per line
         </Text>
         <Textarea
           value={value}
           onChange={(event) => onChange(event.currentTarget.value)}
           placeholder={'dQw4w9WgXcQ\nhttps://www.youtube.com/watch?v=J---aiyznGQ\nkJQP7kiw5Fk'}
           autosize
-          minRows={4}
+          minRows={2}
+          maxRows={5}
+          size="xs"
         />
         <Group gap="xs" wrap="wrap">
-          <Button onClick={onLoad}>Load + Shuffle</Button>
-          <Button variant="default" onClick={onClear}>
+          <Button size="compact-sm" onClick={onLoad}>
+            Load + Shuffle
+          </Button>
+          <Button size="compact-sm" variant="default" onClick={onClear}>
             Clear
           </Button>
         </Group>

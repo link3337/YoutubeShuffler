@@ -11,7 +11,14 @@ import {
   selectQueue,
   usePlaylistStore
 } from '../stores/playlistStore';
-import type { MessageState, VideoItem } from '../types';
+import type { ImportedPlaylistSummary, MessageState, VideoItem } from '../types';
+import {
+  deleteImportedPlaylist,
+  getImportedPlaylist,
+  listImportedPlaylists,
+  renameImportedPlaylist,
+  saveImportedPlaylist
+} from '../utils/importedPlaylistsDb';
 import {
   downloadJson,
   extractVideoIdFromLine,
@@ -106,6 +113,10 @@ export type PlaylistShufflerOutletContext = {
   handleExportQueue: () => void;
   handleLoadManual: () => void;
   handleClear: () => void;
+  importedPlaylists: ImportedPlaylistSummary[];
+  handleLoadImportedPlaylist: (id: string) => void;
+  handleDeleteImportedPlaylist: (id: string) => void;
+  handleRenameImportedPlaylist: (id: string, nextName: string) => void;
   isDarkMode: boolean;
   onToggleTheme: (isDark: boolean) => void;
   connectTwitchChat: () => void;
@@ -178,13 +189,14 @@ export default function PlaylistShufflerApp({
   const pendingPlayIndexRef = useRef<number | null>(null);
   const nowPlayingRef = useRef(nowPlaying);
   const loopCurrentSongRef = useRef(loopCurrentSong);
-  const playIndexHandlerRef = useRef<(index: number) => void>(() => { });
-  const nextVideoHandlerRef = useRef<() => void>(() => { });
+  const playIndexHandlerRef = useRef<(index: number) => void>(() => {});
+  const nextVideoHandlerRef = useRef<() => void>(() => {});
   const failedVideoIdsRef = useRef<Set<string>>(new Set());
   const userRequestCountsRef = useRef<Record<string, number>>({});
   const webNowPlayingFileHandleRef = useRef<FileSystemFileHandle | null>(null);
   const [webNowPlayingFileLabel, setWebNowPlayingFileLabel] = useState('Not selected');
   const [needsWebNowPlayingReauth, setNeedsWebNowPlayingReauth] = useState(false);
+  const [importedPlaylists, setImportedPlaylists] = useState<ImportedPlaylistSummary[]>([]);
 
   const fileInputYtdlpRef = useRef<HTMLInputElement | null>(null);
   const fileInputHtmlRef = useRef<HTMLInputElement | null>(null);
@@ -202,6 +214,24 @@ export default function PlaylistShufflerApp({
     return `${folder}${separator}${NOW_PLAYING_FILE_NAME}`;
   }, []);
 
+  const refreshImportedPlaylists = useCallback(async () => {
+    try {
+      const saved = await listImportedPlaylists();
+      setImportedPlaylists(saved);
+    } catch (error) {
+      console.warn('Could not list imported playlists', error);
+    }
+  }, []);
+
+  const deriveImportedPlaylistName = useCallback((fileName: string, fallback: string): string => {
+    const trimmed = fileName.trim();
+    if (!trimmed) {
+      return fallback;
+    }
+
+    return trimmed.replace(/\.[^.]+$/, '') || fallback;
+  }, []);
+
   useEffect(() => {
     initializeNowPlayingFolder();
   }, [initializeNowPlayingFolder]);
@@ -209,6 +239,10 @@ export default function PlaylistShufflerApp({
   useEffect(() => {
     initializeNowPlayingTemplate();
   }, [initializeNowPlayingTemplate]);
+
+  useEffect(() => {
+    void refreshImportedPlaylists();
+  }, [refreshImportedPlaylists]);
 
   useEffect(() => {
     if (!isWebNowPlayingMode) {
@@ -928,12 +962,24 @@ export default function PlaylistShufflerApp({
         const text = await file.text();
         const items = parseYtDlpJson(text);
         setQueueAndPlay(items, 'yt-dlp import');
+        void (async () => {
+          try {
+            await saveImportedPlaylist({
+              name: deriveImportedPlaylistName(file.name || '', 'yt-dlp import'),
+              source: 'yt-dlp',
+              items
+            });
+            await refreshImportedPlaylists();
+          } catch (saveError) {
+            console.warn('Could not save imported playlist', saveError);
+          }
+        })();
       } catch (error) {
         setStatus('');
         updateMessage(String(error instanceof Error ? error.message : error));
       }
     },
-    [setQueueAndPlay, updateMessage]
+    [deriveImportedPlaylistName, refreshImportedPlaylists, setQueueAndPlay, updateMessage]
   );
 
   const handleHtmlFileChange = useCallback(
@@ -950,12 +996,75 @@ export default function PlaylistShufflerApp({
         const text = await file.text();
         const items = await parsePlaylistHtml(text);
         setQueueAndPlay(items, 'HTML import (best-effort)');
+        void (async () => {
+          try {
+            await saveImportedPlaylist({
+              name: deriveImportedPlaylistName(file.name || '', 'playlist HTML import'),
+              source: 'html',
+              items
+            });
+            await refreshImportedPlaylists();
+          } catch (saveError) {
+            console.warn('Could not save imported playlist', saveError);
+          }
+        })();
       } catch (error) {
         setStatus('');
         updateMessage(String(error instanceof Error ? error.message : error));
       }
     },
-    [setQueueAndPlay, updateMessage]
+    [deriveImportedPlaylistName, refreshImportedPlaylists, setQueueAndPlay, updateMessage]
+  );
+
+  const handleLoadImportedPlaylist = useCallback(
+    (id: string) => {
+      void (async () => {
+        try {
+          const saved = await getImportedPlaylist(id);
+          if (!saved) {
+            updateMessage('Saved playlist not found.');
+            await refreshImportedPlaylists();
+            return;
+          }
+
+          setQueueAndPlay(saved.items, `Saved import: ${saved.name}`);
+          updateMessage(`Loaded saved playlist: ${saved.name}`, true);
+        } catch (error) {
+          updateMessage(`Could not load saved playlist: ${String(error)}`);
+        }
+      })();
+    },
+    [refreshImportedPlaylists, setQueueAndPlay, updateMessage]
+  );
+
+  const handleDeleteImportedPlaylist = useCallback(
+    (id: string) => {
+      void (async () => {
+        try {
+          await deleteImportedPlaylist(id);
+          await refreshImportedPlaylists();
+          updateMessage('Removed saved imported playlist.', true);
+        } catch (error) {
+          updateMessage(`Could not remove saved playlist: ${String(error)}`);
+        }
+      })();
+    },
+    [refreshImportedPlaylists, updateMessage]
+  );
+
+  const handleRenameImportedPlaylist = useCallback(
+    (id: string, nextName: string) => {
+      void (async () => {
+        try {
+          await renameImportedPlaylist(id, nextName);
+          await refreshImportedPlaylists();
+          updateMessage('Updated saved playlist name.', true);
+        } catch (error) {
+          updateMessage(`Could not rename saved playlist: ${String(error)}`);
+        }
+      })();
+    },
+    [refreshImportedPlaylists, updateMessage]
   );
 
   const handleLoadManual = useCallback(() => {
@@ -1152,6 +1261,10 @@ export default function PlaylistShufflerApp({
     handleExportQueue,
     handleLoadManual,
     handleClear,
+    importedPlaylists,
+    handleLoadImportedPlaylist,
+    handleDeleteImportedPlaylist,
+    handleRenameImportedPlaylist,
     isDarkMode,
     onToggleTheme,
     connectTwitchChat,

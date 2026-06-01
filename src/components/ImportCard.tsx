@@ -6,6 +6,7 @@ type ImportCardProps = {
   onImportHtml: () => void;
   onReshuffle: () => void;
   onExportQueue: () => void;
+  onOpenManualInput: () => void;
   onToggleLoopCurrentSong: () => void;
 };
 
@@ -14,7 +15,8 @@ export function ImportCard({
   onImportYtdlp,
   onImportHtml,
   onReshuffle,
-  onExportQueue
+  onExportQueue,
+  onOpenManualInput
 }: ImportCardProps) {
   return (
     <Card withBorder radius="md">
@@ -38,6 +40,9 @@ export function ImportCard({
           </Button>
           <Button onClick={onExportQueue} disabled={!hasQueue}>
             Export queue JSON
+          </Button>
+          <Button variant="default" onClick={onOpenManualInput}>
+            Open Manual Input
           </Button>
         </Group>
 
