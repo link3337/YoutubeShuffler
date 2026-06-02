@@ -56,6 +56,42 @@ export function sanitizeTitleForTextFile(title: string): string {
   return String(title).replace(/\s+/g, ' ').trim();
 }
 
+const YOUTUBE_VIDEO_ID_PATTERN = /^[a-zA-Z0-9_-]{8,}$/;
+const youtubeTitleCache = new Map<string, string>();
+
+export async function fetchYouTubeVideoTitle(videoId: string): Promise<string | null> {
+  const normalizedVideoId = String(videoId || '').trim();
+  if (!YOUTUBE_VIDEO_ID_PATTERN.test(normalizedVideoId)) {
+    return null;
+  }
+
+  const cached = youtubeTitleCache.get(normalizedVideoId);
+  if (cached) {
+    return cached;
+  }
+
+  const watchUrl = `https://www.youtube.com/watch?v=${normalizedVideoId}`;
+  const endpoint = `https://www.youtube.com/oembed?url=${encodeURIComponent(watchUrl)}&format=json`;
+
+  try {
+    const response = await fetch(endpoint);
+    if (!response.ok) {
+      return null;
+    }
+
+    const payload = (await response.json()) as { title?: string };
+    const title = sanitizeTitleForTextFile(payload.title ?? '');
+    if (!title) {
+      return null;
+    }
+
+    youtubeTitleCache.set(normalizedVideoId, title);
+    return title;
+  } catch {
+    return null;
+  }
+}
+
 export function isPrivateVideoTitle(title: string | null | undefined): boolean {
   const normalized = sanitizeTitleForTextFile(String(title ?? '')).toLowerCase();
   return (

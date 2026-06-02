@@ -22,6 +22,7 @@ import {
 import {
   downloadJson,
   extractVideoIdFromLine,
+  fetchYouTubeVideoTitle,
   fisherYatesShuffle,
   isPrivateVideoTitle,
   parsePlaylistHtml,
@@ -189,8 +190,8 @@ export default function PlaylistShufflerApp({
   const pendingPlayIndexRef = useRef<number | null>(null);
   const nowPlayingRef = useRef(nowPlaying);
   const loopCurrentSongRef = useRef(loopCurrentSong);
-  const playIndexHandlerRef = useRef<(index: number) => void>(() => {});
-  const nextVideoHandlerRef = useRef<() => void>(() => {});
+  const playIndexHandlerRef = useRef<(index: number) => void>(() => { });
+  const nextVideoHandlerRef = useRef<() => void>(() => { });
   const failedVideoIdsRef = useRef<Set<string>>(new Set());
   const userRequestCountsRef = useRef<Record<string, number>>({});
   const webNowPlayingFileHandleRef = useRef<FileSystemFileHandle | null>(null);
@@ -737,6 +738,45 @@ export default function PlaylistShufflerApp({
       }
       setStatus(`Added song request from ${requestedBy}: ${videoId} (up next)`);
       updateMessage(`Song request queued as next song (${videoId}).`, true);
+
+      void (async () => {
+        const resolvedTitle = await fetchYouTubeVideoTitle(videoId);
+        if (!resolvedTitle) {
+          return;
+        }
+
+        const latestQueue = queueRef.current;
+        let changed = false;
+        const updatedQueue = latestQueue.map((item) => {
+          if (item.videoId !== videoId) {
+            return item;
+          }
+
+          const currentTitle = (item.title || '').trim();
+          if (!REQUEST_TITLE_PATTERN.test(currentTitle)) {
+            return item;
+          }
+
+          const nextTitle = `[Request by ${requestedBy}] ${resolvedTitle}`;
+          if (currentTitle === nextTitle) {
+            return item;
+          }
+
+          changed = true;
+          return {
+            ...item,
+            title: nextTitle
+          };
+        });
+
+        if (!changed) {
+          return;
+        }
+
+        queueRef.current = updatedQueue;
+        setQueue(updatedQueue);
+        saveQueueSession(updatedQueue, currentIndexRef.current);
+      })();
 
       if (!currentQueue.length) {
         setCurrentIndex(0);
