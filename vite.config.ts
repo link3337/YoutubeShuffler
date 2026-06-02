@@ -28,7 +28,6 @@ export default defineConfig(async () => ({
             src: 'app-icon.png',
             sizes: 'any',
             type: 'image/png',
-            purpose: 'any maskable'
           },
           {
             src: 'icon.ico',
