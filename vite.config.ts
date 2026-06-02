@@ -10,7 +10,10 @@ export default defineConfig(async () => ({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['icon.ico', 'appicon.png'],
+      includeAssets: [
+        'icon.ico',
+        'app-icon.png',
+      ],
       manifest: {
         name: 'Youtube Playlist Shuffler',
         short_name: 'Youtube Shuffler',
@@ -22,7 +25,7 @@ export default defineConfig(async () => ({
         scope: '/',
         icons: [
           {
-            src: 'appicon.png',
+            src: 'app-icon.png',
             sizes: 'any',
             type: 'image/png',
             purpose: 'any maskable'
