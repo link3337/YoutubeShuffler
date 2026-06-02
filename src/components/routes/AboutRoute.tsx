@@ -1,7 +1,7 @@
 import { Anchor, List, Paper, Stack, Text, Title } from '@mantine/core';
 import packageJson from '../../../package.json';
 
-const TESTERS = ['Homura'];
+const TESTERS = ['Homura', 'Bret'];
 
 export default function AboutRoute() {
   return (

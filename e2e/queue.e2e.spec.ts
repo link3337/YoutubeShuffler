@@ -31,10 +31,15 @@ test.beforeEach(async ({ page }) => {
 test('manual input loads playlist and enables reshuffle', async ({ page }) => {
   await page.goto('/home');
 
-  const textarea = page.locator('textarea').first();
+  await page.getByRole('button', { name: 'Open Manual Input' }).click();
+
+  const manualDialog = page.getByRole('dialog', { name: 'Manual Input' });
+  await expect(manualDialog).toBeVisible();
+
+  const textarea = manualDialog.locator('textarea').first();
   await textarea.fill('alpha1234\nbeta5678\ngamma9012');
 
-  await page.getByRole('button', { name: 'Load + Shuffle' }).click();
+  await manualDialog.getByRole('button', { name: 'Load + Shuffle' }).click();
 
   // At least one queue item should appear
   await expect(page.getByRole('button', { name: /^1\./i })).toBeVisible();
