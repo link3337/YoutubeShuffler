@@ -1,7 +1,11 @@
 import { useCallback, useEffect, useRef } from 'react';
 import { useTwitchStore } from '../../stores/twitchStore';
 import { extractVideoIdFromLine } from '../../utils/playlist';
-import { extractChatMessageFromIrcLine, extractRequestedVideoId } from '../../utils/twitch';
+import {
+  extractChatMessageFromIrcLine,
+  extractRequestedVideoId,
+  normalizeTwitchChannelInput
+} from '../../utils/twitch';
 
 type UseTwitchRequestsArgs = {
   updateMessage: (text: string, ok?: boolean) => void;
@@ -67,7 +71,7 @@ export function useTwitchRequests({
       const accessToken = normalizedToken.toLowerCase().startsWith('oauth:')
         ? normalizedToken.slice(6)
         : normalizedToken;
-      const normalizedChannel = channelName.trim().replace(/^#/, '').toLowerCase();
+      const normalizedChannel = normalizeTwitchChannelInput(channelName);
       const sanitizedText = text
         .replace(/[\r\n]+/g, ' ')
         .trim()
@@ -191,9 +195,16 @@ export function useTwitchRequests({
   );
 
   const connectTwitchChat = useCallback(() => {
-    const channel = twitchChannel.trim().replace(/^#/, '').toLowerCase();
-    if (!channel) {
+    const rawChannelInput = twitchChannel.trim();
+    const channel = normalizeTwitchChannelInput(twitchChannel);
+    if (!rawChannelInput) {
       updateMessage('Enter a Twitch channel name before connecting.');
+      return;
+    }
+    if (!channel) {
+      updateMessage(
+        'Invalid Twitch channel. Use a channel name (for example: ohnepixel) or a Twitch URL like https://www.twitch.tv/ohnepixel.'
+      );
       return;
     }
 

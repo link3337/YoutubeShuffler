@@ -10,6 +10,7 @@ import {
   Textarea
 } from '@mantine/core';
 import { useTwitchStore } from '../stores/twitchStore';
+import { normalizeTwitchChannelInput } from '../utils/twitch';
 
 type TwitchRequestCardProps = {
   onConnect: () => void;
@@ -29,6 +30,13 @@ export function TwitchRequestCard({ onConnect, onDisconnect }: TwitchRequestCard
   const onShadowbannedUsersChange = useTwitchStore((state) => state.setShadowbannedUsers);
   const onBlacklistedSongsChange = useTwitchStore((state) => state.setBlacklistedSongs);
 
+  const trimmedChannel = channel.trim();
+  const normalizedChannel = normalizeTwitchChannelInput(channel);
+  const channelValidationError =
+    trimmedChannel && !normalizedChannel
+      ? 'Use a channel name (example: ohnepixel) or a Twitch URL like https://www.twitch.tv/ohnepixel.'
+      : null;
+
   return (
     <Card withBorder radius="md">
       <Stack gap="sm">
@@ -45,10 +53,16 @@ export function TwitchRequestCard({ onConnect, onDisconnect }: TwitchRequestCard
         </Group>
 
         <TextInput
-          label="Channel"
-          placeholder="your_channel"
+          label={
+            <Group gap={4} align="center">
+              <Text size="sm">Channel</Text>
+            </Group>
+          }
+          placeholder="your_channel or https://www.twitch.tv/your_channel"
           value={channel}
           onChange={(event) => onChannelChange(event.currentTarget.value)}
+          description="Accepted: channel name or Twitch channel URL."
+          error={channelValidationError}
           disabled={connected}
         />
 

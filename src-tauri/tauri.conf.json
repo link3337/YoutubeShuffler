@@ -17,6 +17,7 @@
         "height": 720,
         "minWidth": 770,
         "minHeight": 500,
+        "zoomHotkeysEnabled": true,
         "resizable": true
       }
     ],

@@ -32,6 +32,50 @@ export type TwitchTokenResponse = {
   token_type: string;
 };
 
+export function normalizeTwitchChannelInput(input: string): string {
+  const trimmed = input.trim();
+  if (!trimmed) {
+    return '';
+  }
+
+  let value = trimmed;
+  const hasHttpProtocol = /^https?:\/\//i.test(value);
+  const hasTwitchHostPrefix = /^(?:www\.)?twitch\.tv\//i.test(value);
+
+  // Accept direct Twitch channel URLs and keep only the first path segment.
+  if (hasHttpProtocol) {
+    try {
+      const url = new URL(value);
+      const host = url.hostname.toLowerCase();
+      if (host !== 'twitch.tv' && host !== 'www.twitch.tv') {
+        return '';
+      }
+
+      value = url.pathname;
+    } catch {
+      return '';
+    }
+  } else if (hasTwitchHostPrefix) {
+    value = value.replace(/^(?:www\.)?twitch\.tv\//i, '');
+  } else {
+    // Plain channel names should not include path/query/hash fragments.
+    if (/[/?#]/.test(value)) {
+      return '';
+    }
+  }
+
+  value = value.replace(/^\/+/, '');
+  value = value.split(/[/?#]/)[0] || '';
+  value = value.replace(/^[@#]/, '').trim().toLowerCase();
+
+  // Twitch login names allow letters, numbers, and underscores.
+  if (!value || !/^[a-z0-9_]+$/i.test(value)) {
+    return '';
+  }
+
+  return value;
+}
+
 type ParsedIrc = {
   tags: Record<string, string>;
   command: string;
