@@ -4,6 +4,11 @@ use tauri::Emitter;
 use tauri_plugin_global_shortcut::{Code, Shortcut, ShortcutState};
 
 #[tauri::command]
+fn log_info(message: String) {
+    log::info!("{message}");
+}
+
+#[tauri::command]
 fn write_now_playing(title: String, path: Option<String>) -> Result<(), String> {
     // one line, trimmed
     let clean = title.split_whitespace().collect::<Vec<_>>().join(" ");
@@ -48,8 +53,9 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_log::Builder::new().build())
         .plugin(global_shortcuts)
-        .invoke_handler(tauri::generate_handler![write_now_playing])
+        .invoke_handler(tauri::generate_handler![write_now_playing, log_info])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

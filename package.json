@@ -15,11 +15,12 @@
     "prettier": "prettier --write . --config .prettierrc"
   },
   "dependencies": {
-    "@mantine/core": "^9.2.2",
-    "@mantine/hooks": "^9",
+    "@mantine/core": "^9.3.0",
+    "@mantine/hooks": "^9.3.0",
     "@tabler/icons-react": "^3.44.0",
     "@tauri-apps/api": "^2.11.0",
     "@tauri-apps/plugin-dialog": "^2.7.1",
+    "@tauri-apps/plugin-log": "^2.8.0",
     "@tauri-apps/plugin-opener": "^2.5.4",
     "prettier": "^3.8.3",
     "react": "^19.2.7",

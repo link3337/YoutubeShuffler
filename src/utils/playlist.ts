@@ -1,3 +1,4 @@
+import { info } from '@tauri-apps/plugin-log';
 import type { VideoItem } from '../types';
 
 export function fisherYatesShuffle<T>(arr: T[]): T[] {
@@ -59,35 +60,85 @@ export function sanitizeTitleForTextFile(title: string): string {
 const YOUTUBE_VIDEO_ID_PATTERN = /^[a-zA-Z0-9_-]{8,}$/;
 const youtubeTitleCache = new Map<string, string>();
 
-export async function fetchYouTubeVideoTitle(videoId: string): Promise<string | null> {
+type YouTubeTitleLookupDebug = {
+  status: 'invalid-id' | 'cache-hit' | 'request-start' | 'http-error' | 'empty-title' | 'success' | 'exception';
+  videoId: string;
+  message: string;
+  httpStatus?: number;
+};
+
+export async function fetchYouTubeVideoTitle(
+  videoId: string
+): Promise<string | null> {
+  const logLookup = (event: YouTubeTitleLookupDebug) => {
+    const status = event.httpStatus ? `${event.status}(${event.httpStatus})` : event.status;
+    void info(`[youtube-title-lookup] ${status} ${event.videoId} - ${event.message}`);
+  };
+
   const normalizedVideoId = String(videoId || '').trim();
   if (!YOUTUBE_VIDEO_ID_PATTERN.test(normalizedVideoId)) {
+    logLookup({
+      status: 'invalid-id',
+      videoId: normalizedVideoId,
+      message: 'Skipped title lookup: invalid YouTube video ID format.'
+    });
     return null;
   }
 
   const cached = youtubeTitleCache.get(normalizedVideoId);
   if (cached) {
+    logLookup({
+      status: 'cache-hit',
+      videoId: normalizedVideoId,
+      message: `Resolved title from cache: ${cached}`
+    });
     return cached;
   }
 
   const watchUrl = `https://www.youtube.com/watch?v=${normalizedVideoId}`;
   const endpoint = `https://www.youtube.com/oembed?url=${encodeURIComponent(watchUrl)}&format=json`;
+  logLookup({
+    status: 'request-start',
+    videoId: normalizedVideoId,
+    message: 'Fetching title via YouTube oEmbed.'
+  });
 
   try {
     const response = await fetch(endpoint);
     if (!response.ok) {
+      logLookup({
+        status: 'http-error',
+        videoId: normalizedVideoId,
+        message: `YouTube oEmbed returned HTTP ${response.status}.`,
+        httpStatus: response.status
+      });
       return null;
     }
 
     const payload = (await response.json()) as { title?: string };
     const title = sanitizeTitleForTextFile(payload.title ?? '');
     if (!title) {
+      logLookup({
+        status: 'empty-title',
+        videoId: normalizedVideoId,
+        message: 'YouTube oEmbed returned an empty title.'
+      });
       return null;
     }
 
     youtubeTitleCache.set(normalizedVideoId, title);
+    logLookup({
+      status: 'success',
+      videoId: normalizedVideoId,
+      message: `Resolved title from YouTube oEmbed: ${title}`
+    });
     return title;
-  } catch {
+  } catch (error) {
+    logLookup({
+      status: 'exception',
+      videoId: normalizedVideoId,
+      message: `YouTube title lookup failed: ${String(error)}`
+    });
     return null;
   }
 }

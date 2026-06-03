@@ -45,11 +45,23 @@ import { useTwitchRequests } from './hooks/useTwitchRequests';
 import { PlayerQueueSection } from './PlayerQueueSection';
 
 const NOW_PLAYING_FILE_NAME = 'current_song.txt';
-const MAX_REQUESTS_PER_USER = 5;
+const MAX_REQUESTS_PER_USER = 10;
 const REQUEST_TITLE_PATTERN = /^\[Request by [^\]]+\]\s+/i;
+const REQUEST_TITLE_EXTRACT_PATTERN = /^\[Request by ([^\]]+)\]\s+/i;
 
 function isRequestQueueItem(item: VideoItem): boolean {
   return REQUEST_TITLE_PATTERN.test((item.title || '').trim());
+}
+
+function getRequesterKeyFromItem(item: VideoItem): string | null {
+  const title = (item.title || '').trim();
+  const match = REQUEST_TITLE_EXTRACT_PATTERN.exec(title);
+  if (!match?.[1]) {
+    return null;
+  }
+
+  const requesterKey = match[1].trim().toLowerCase();
+  return requesterKey || null;
 }
 
 type YTPlayerInstance = {
@@ -194,6 +206,7 @@ export default function PlaylistShufflerApp({
   const nextVideoHandlerRef = useRef<() => void>(() => { });
   const failedVideoIdsRef = useRef<Set<string>>(new Set());
   const userRequestCountsRef = useRef<Record<string, number>>({});
+  const fulfilledRequestVideoIdsRef = useRef<Set<string>>(new Set());
   const webNowPlayingFileHandleRef = useRef<FileSystemFileHandle | null>(null);
   const [webNowPlayingFileLabel, setWebNowPlayingFileLabel] = useState('Not selected');
   const [needsWebNowPlayingReauth, setNeedsWebNowPlayingReauth] = useState(false);
@@ -294,6 +307,13 @@ export default function PlaylistShufflerApp({
         failedVideoIdsRef.current.delete(failedId);
       }
     }
+
+    // Keep fulfilled request markers aligned with the current queue.
+    for (const fulfilledId of fulfilledRequestVideoIdsRef.current) {
+      if (!queueIds.has(fulfilledId)) {
+        fulfilledRequestVideoIdsRef.current.delete(fulfilledId);
+      }
+    }
   }, [queue]);
 
   useEffect(() => {
@@ -363,10 +383,29 @@ export default function PlaylistShufflerApp({
       if (index < 0 || index >= currentQueue.length) {
         return;
       }
+      const nextItem = currentQueue[index];
+
+      if (
+        nextItem &&
+        nextItem.videoId &&
+        isRequestQueueItem(nextItem) &&
+        !fulfilledRequestVideoIdsRef.current.has(nextItem.videoId)
+      ) {
+        const requesterKey = getRequesterKeyFromItem(nextItem);
+        if (requesterKey) {
+          const currentCount = userRequestCountsRef.current[requesterKey] ?? 0;
+          if (currentCount <= 1) {
+            delete userRequestCountsRef.current[requesterKey];
+          } else {
+            userRequestCountsRef.current[requesterKey] = currentCount - 1;
+          }
+        }
+        fulfilledRequestVideoIdsRef.current.add(nextItem.videoId);
+      }
 
       setCurrentIndex(index);
 
-      const item = currentQueue[index];
+      const item = nextItem;
       if (!item) {
         return;
       }
@@ -676,6 +715,8 @@ export default function PlaylistShufflerApp({
       }
 
       const shuffled = fisherYatesShuffle([...cleaned]);
+      userRequestCountsRef.current = {};
+      fulfilledRequestVideoIdsRef.current.clear();
       queueRef.current = shuffled;
       setQueue(shuffled);
       setCurrentIndex(0);
@@ -725,7 +766,10 @@ export default function PlaylistShufflerApp({
         title: `[Request by ${requestedBy}] ${videoId}`
       };
 
-      const insertIndex = Math.min(Math.max(currentIndexRef.current + 1, 0), currentQueue.length);
+      let insertIndex = Math.min(Math.max(currentIndexRef.current + 1, 0), currentQueue.length);
+      while (insertIndex < currentQueue.length && isRequestQueueItem(currentQueue[insertIndex])) {
+        insertIndex += 1;
+      }
       const nextQueue = [
         ...currentQueue.slice(0, insertIndex),
         requestedItem,
@@ -736,6 +780,7 @@ export default function PlaylistShufflerApp({
       if (requesterKey) {
         userRequestCountsRef.current[requesterKey] = currentUserCount + 1;
       }
+
       setStatus(`Added song request from ${requestedBy}: ${videoId} (up next)`);
       updateMessage(`Song request queued as next song (${videoId}).`, true);
 
@@ -1140,6 +1185,7 @@ export default function PlaylistShufflerApp({
     pendingPlayIndexRef.current = null;
     failedVideoIdsRef.current.clear();
     userRequestCountsRef.current = {};
+    fulfilledRequestVideoIdsRef.current.clear();
     clearQueueSession();
   }, [clearQueueSession, resetPlaylistState, updateMessage]);
 
@@ -1148,6 +1194,20 @@ export default function PlaylistShufflerApp({
       const currentQueue = queueRef.current;
       if (removeIndex < 0 || removeIndex >= currentQueue.length) {
         return;
+      }
+
+      const removedItem = currentQueue[removeIndex];
+      if (removedItem?.videoId && isRequestQueueItem(removedItem)) {
+        const requesterKey = getRequesterKeyFromItem(removedItem);
+        if (requesterKey) {
+          const currentCount = userRequestCountsRef.current[requesterKey] ?? 0;
+          if (currentCount <= 1) {
+            delete userRequestCountsRef.current[requesterKey];
+          } else {
+            userRequestCountsRef.current[requesterKey] = currentCount - 1;
+          }
+        }
+        fulfilledRequestVideoIdsRef.current.add(removedItem.videoId);
       }
 
       const nextQueue = currentQueue.filter((_, idx) => idx !== removeIndex);
@@ -1216,6 +1276,24 @@ export default function PlaylistShufflerApp({
     if (!requestIndices.length) {
       updateMessage('No song requests found in queue.', true);
       return;
+    }
+
+    for (const requestIndex of requestIndices) {
+      const requestItem = currentQueue[requestIndex];
+      if (!requestItem?.videoId) {
+        continue;
+      }
+
+      const requesterKey = getRequesterKeyFromItem(requestItem);
+      if (requesterKey) {
+        const currentCount = userRequestCountsRef.current[requesterKey] ?? 0;
+        if (currentCount <= 1) {
+          delete userRequestCountsRef.current[requesterKey];
+        } else {
+          userRequestCountsRef.current[requesterKey] = currentCount - 1;
+        }
+      }
+      fulfilledRequestVideoIdsRef.current.add(requestItem.videoId);
     }
 
     const requestIndexSet = new Set(requestIndices);
