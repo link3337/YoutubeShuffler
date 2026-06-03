@@ -9,6 +9,7 @@ type TwitchStoreState = {
   twitchOauthToken: string;
   shadowbannedUsers: string;
   blacklistedSongs: string;
+  maxRequestsPerUser: number;
   twitchConnected: boolean;
   requestCount: number;
   setTwitchChannel: (value: string) => void;
@@ -16,6 +17,7 @@ type TwitchStoreState = {
   setTwitchOauthToken: (value: string) => void;
   setShadowbannedUsers: (value: string) => void;
   setBlacklistedSongs: (value: string) => void;
+  setMaxRequestsPerUser: (value: number) => void;
   setTwitchConnected: (value: boolean) => void;
   incrementRequestCount: () => void;
   resetRequestCount: () => void;
@@ -29,6 +31,7 @@ export const useTwitchStore = create<TwitchStoreState>()(
       twitchOauthToken: '',
       shadowbannedUsers: '',
       blacklistedSongs: '',
+      maxRequestsPerUser: 10,
       twitchConnected: false,
       requestCount: 0,
       setTwitchChannel: (value) => set({ twitchChannel: value }),
@@ -36,6 +39,12 @@ export const useTwitchStore = create<TwitchStoreState>()(
       setTwitchOauthToken: (value) => set({ twitchOauthToken: value }),
       setShadowbannedUsers: (value) => set({ shadowbannedUsers: value }),
       setBlacklistedSongs: (value) => set({ blacklistedSongs: value }),
+      setMaxRequestsPerUser: (value) =>
+        set({
+          maxRequestsPerUser: Number.isFinite(value)
+            ? Math.min(100, Math.max(0, Math.floor(value)))
+            : 10
+        }),
       setTwitchConnected: (value) => set({ twitchConnected: value }),
       incrementRequestCount: () =>
         set((state) => ({
@@ -51,7 +60,8 @@ export const useTwitchStore = create<TwitchStoreState>()(
         twitchUsername: state.twitchUsername,
         twitchOauthToken: state.twitchOauthToken,
         shadowbannedUsers: state.shadowbannedUsers,
-        blacklistedSongs: state.blacklistedSongs
+        blacklistedSongs: state.blacklistedSongs,
+        maxRequestsPerUser: state.maxRequestsPerUser
       })
     }
   )

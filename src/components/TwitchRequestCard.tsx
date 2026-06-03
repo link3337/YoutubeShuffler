@@ -3,6 +3,7 @@ import {
   Button,
   Card,
   Group,
+  NumberInput,
   PasswordInput,
   Stack,
   Text,
@@ -22,6 +23,7 @@ export function TwitchRequestCard({ onConnect, onDisconnect }: TwitchRequestCard
   const oauthToken = useTwitchStore((state) => state.twitchOauthToken);
   const shadowbannedUsers = useTwitchStore((state) => state.shadowbannedUsers);
   const blacklistedSongs = useTwitchStore((state) => state.blacklistedSongs);
+  const maxRequestsPerUser = useTwitchStore((state) => state.maxRequestsPerUser);
   const connected = useTwitchStore((state) => state.twitchConnected);
   const requestCount = useTwitchStore((state) => state.requestCount);
 
@@ -29,6 +31,7 @@ export function TwitchRequestCard({ onConnect, onDisconnect }: TwitchRequestCard
   const onOauthTokenChange = useTwitchStore((state) => state.setTwitchOauthToken);
   const onShadowbannedUsersChange = useTwitchStore((state) => state.setShadowbannedUsers);
   const onBlacklistedSongsChange = useTwitchStore((state) => state.setBlacklistedSongs);
+  const onMaxRequestsPerUserChange = useTwitchStore((state) => state.setMaxRequestsPerUser);
 
   const trimmedChannel = channel.trim();
   const normalizedChannel = normalizeTwitchChannelInput(channel);
@@ -90,6 +93,22 @@ export function TwitchRequestCard({ onConnect, onDisconnect }: TwitchRequestCard
           onChange={(event) => onBlacklistedSongsChange(event.currentTarget.value)}
           autosize
           minRows={3}
+        />
+
+        <NumberInput
+          label="Max requests per user"
+          value={maxRequestsPerUser}
+          min={0}
+          max={100}
+          step={1}
+          allowDecimal={false}
+          clampBehavior="strict"
+          onChange={(value) => {
+            if (typeof value === 'number' && Number.isFinite(value)) {
+              onMaxRequestsPerUserChange(value);
+            }
+          }}
+          description="0 = no limit. Otherwise limits pending requests per chatter (max 100)."
         />
 
         <Group gap="xs" wrap="wrap">

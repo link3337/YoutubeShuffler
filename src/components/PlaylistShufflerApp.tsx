@@ -11,6 +11,7 @@ import {
   selectQueue,
   usePlaylistStore
 } from '../stores/playlistStore';
+import { useTwitchStore } from '../stores/twitchStore';
 import type { ImportedPlaylistSummary, MessageState, VideoItem } from '../types';
 import {
   deleteImportedPlaylist,
@@ -45,7 +46,6 @@ import { useTwitchRequests } from './hooks/useTwitchRequests';
 import { PlayerQueueSection } from './PlayerQueueSection';
 
 const NOW_PLAYING_FILE_NAME = 'current_song.txt';
-const MAX_REQUESTS_PER_USER = 10;
 const REQUEST_TITLE_PATTERN = /^\[Request by [^\]]+\]\s+/i;
 const REQUEST_TITLE_EXTRACT_PATTERN = /^\[Request by ([^\]]+)\]\s+/i;
 
@@ -156,6 +156,7 @@ export default function PlaylistShufflerApp({
     typeof window !== 'undefined' &&
     Boolean((window as { __TAURI_INTERNALS__?: unknown }).__TAURI_INTERNALS__);
   const isWebNowPlayingMode = !isTauriRuntime;
+  const maxRequestsPerUser = useTwitchStore((state) => state.maxRequestsPerUser);
 
   const manualInput = usePlaylistStore((state) => state.manualInput);
   const setManualInput = usePlaylistStore((state) => state.setManualInput);
@@ -741,14 +742,14 @@ export default function PlaylistShufflerApp({
     (videoId: string, requestedBy: string): { accepted: boolean; reason?: string } => {
       const requesterKey = (requestedBy || '').trim().toLowerCase();
       const currentUserCount = requesterKey ? (userRequestCountsRef.current[requesterKey] ?? 0) : 0;
-      if (requesterKey && currentUserCount >= MAX_REQUESTS_PER_USER) {
+      if (requesterKey && maxRequestsPerUser > 0 && currentUserCount >= maxRequestsPerUser) {
         updateMessage(
-          `Request ignored: ${requestedBy} reached the ${MAX_REQUESTS_PER_USER} song limit.`,
+          `Request ignored: ${requestedBy} reached the ${maxRequestsPerUser} song limit.`,
           true
         );
         return {
           accepted: false,
-          reason: `you reached the ${MAX_REQUESTS_PER_USER} song request limit.`
+          reason: `you reached the ${maxRequestsPerUser} song request limit.`
         };
       }
 
@@ -837,7 +838,7 @@ export default function PlaylistShufflerApp({
 
       return { accepted: true };
     },
-    [playIndex, saveQueueSession, updateMessage]
+    [maxRequestsPerUser, playIndex, saveQueueSession, updateMessage]
   );
 
   const { connectTwitchChat, disconnectTwitchChat, twitchConnected } = useTwitchRequests({
