@@ -4,6 +4,7 @@ import {
   Button,
   Container,
   Group,
+  Paper,
   Stack,
   Text,
   useComputedColorScheme,
@@ -33,105 +34,154 @@ function App() {
   }, [currentPath, mobileNavHandlers]);
 
   return (
-    <AppShell
-      navbar={{
-        width: { base: 260, sm: 72 },
-        breakpoint: 'sm',
-        collapsed: { mobile: !mobileNavOpened }
-      }}
-      header={{ height: 60 }}
-      footer={{
-        height: 40,
-        collapsed: isMobile
-      }}
-    >
-      <AppShell.Header>
-        <Group h="100%" px="md" justify="space-between" wrap="nowrap">
-          <Group gap="sm" wrap="nowrap">
-            <Burger
-              opened={mobileNavOpened}
-              onClick={mobileNavHandlers.toggle}
-              hiddenFrom="sm"
-              size="sm"
-              aria-label="Toggle navigation"
-            />
-            <Text fw={700} visibleFrom="sm">
-              YouTube Playlist Shuffler
-            </Text>
-            <Text fw={700} hiddenFrom="sm">
-              Playlist Shuffler
-            </Text>
-          </Group>
-        </Group>
-      </AppShell.Header>
-
-      <AppShell.Navbar p="xs">
-        <Stack gap="xs">
-          <Button
-            component={Link}
-            to="/home"
-            variant={isHomeRoute ? 'light' : 'subtle'}
-            justify="flex-start"
-            fullWidth
-            aria-label="Home"
-            onClick={mobileNavHandlers.close}
-          >
-            <Group gap="sm" wrap="nowrap">
-              <IconHome size={18} />
-              <Text hiddenFrom="sm">Home</Text>
+    <>
+      {isMobile ? (
+        <Container size="xl" py="sm" px="xs" className="app app-mobile">
+          <Paper withBorder radius="xl" p="md" className="panel mobile-shell-header">
+            <Group justify="space-between" align="center" wrap="nowrap">
+              <Group gap="sm" wrap="nowrap">
+                <Burger
+                  opened={mobileNavOpened}
+                  onClick={mobileNavHandlers.toggle}
+                  size="sm"
+                  aria-label="Toggle navigation"
+                />
+                <Text fw={700}>Playlist Shuffler</Text>
+              </Group>
             </Group>
-          </Button>
-          <Button
-            component={Link}
-            to="/settings"
-            variant={isSettingsRoute ? 'light' : 'subtle'}
-            justify="flex-start"
-            fullWidth
-            aria-label="Settings"
-            onClick={mobileNavHandlers.close}
-          >
-            <Group gap="sm" wrap="nowrap">
-              <IconSettings size={18} />
-              <Text hiddenFrom="sm">Settings</Text>
-            </Group>
-          </Button>
-          <Button
-            component={Link}
-            to="/about"
-            variant={isAboutRoute ? 'light' : 'subtle'}
-            justify="flex-start"
-            fullWidth
-            aria-label="About"
-            onClick={mobileNavHandlers.close}
-          >
-            <Group gap="sm" wrap="nowrap">
-              <IconInfoCircle size={18} />
-              <Text hiddenFrom="sm">About</Text>
-            </Group>
-          </Button>
-        </Stack>
-      </AppShell.Navbar>
 
-      {!isMobile && (
-        <AppShell.Footer p="xs">
-          <Footer />
-        </AppShell.Footer>
-      )}
+            {mobileNavOpened && (
+              <Stack gap="xs" mt="md">
+                <Button component={Link} to="/home" variant={isHomeRoute ? 'light' : 'subtle'} fullWidth>
+                  Home
+                </Button>
+                <Button
+                  component={Link}
+                  to="/settings"
+                  variant={isSettingsRoute ? 'light' : 'subtle'}
+                  fullWidth
+                >
+                  Settings
+                </Button>
+                <Button
+                  component={Link}
+                  to="/about"
+                  variant={isAboutRoute ? 'light' : 'subtle'}
+                  fullWidth
+                >
+                  About
+                </Button>
+              </Stack>
+            )}
+          </Paper>
 
-      <AppShell.Main>
-        <Container
-          size="xl"
-          py={{ base: 'sm', sm: 'md' }}
-          px={{ base: 'xs', sm: 'md' }}
-          className="app"
-        >
           <AppRoutes
             isDarkMode={computedColorScheme === 'dark'}
             onToggleTheme={(isDark) => setColorScheme(isDark ? 'dark' : 'light')}
           />
         </Container>
-      </AppShell.Main>
-    </AppShell>
+      ) : (
+        <AppShell
+          navbar={{
+            width: { base: 260, sm: 72 },
+            breakpoint: 'sm',
+            collapsed: { mobile: !mobileNavOpened }
+          }}
+          header={{ height: 60 }}
+          footer={{
+            height: 40,
+            collapsed: isMobile
+          }}
+        >
+          <AppShell.Header>
+            <Group h="100%" px="md" justify="space-between" wrap="nowrap">
+              <Group gap="sm" wrap="nowrap">
+                <Burger
+                  opened={mobileNavOpened}
+                  onClick={mobileNavHandlers.toggle}
+                  hiddenFrom="sm"
+                  size="sm"
+                  aria-label="Toggle navigation"
+                />
+                <Text fw={700} visibleFrom="sm">
+                  YouTube Playlist Shuffler
+                </Text>
+                <Text fw={700} hiddenFrom="sm">
+                  Playlist Shuffler
+                </Text>
+              </Group>
+            </Group>
+          </AppShell.Header>
+
+          <AppShell.Navbar p="xs">
+            <Stack gap="xs">
+              <Button
+                component={Link}
+                to="/home"
+                variant={isHomeRoute ? 'light' : 'subtle'}
+                justify="flex-start"
+                fullWidth
+                aria-label="Home"
+                onClick={mobileNavHandlers.close}
+              >
+                <Group gap="sm" wrap="nowrap">
+                  <IconHome size={18} />
+                  <Text hiddenFrom="sm">Home</Text>
+                </Group>
+              </Button>
+              <Button
+                component={Link}
+                to="/settings"
+                variant={isSettingsRoute ? 'light' : 'subtle'}
+                justify="flex-start"
+                fullWidth
+                aria-label="Settings"
+                onClick={mobileNavHandlers.close}
+              >
+                <Group gap="sm" wrap="nowrap">
+                  <IconSettings size={18} />
+                  <Text hiddenFrom="sm">Settings</Text>
+                </Group>
+              </Button>
+              <Button
+                component={Link}
+                to="/about"
+                variant={isAboutRoute ? 'light' : 'subtle'}
+                justify="flex-start"
+                fullWidth
+                aria-label="About"
+                onClick={mobileNavHandlers.close}
+              >
+                <Group gap="sm" wrap="nowrap">
+                  <IconInfoCircle size={18} />
+                  <Text hiddenFrom="sm">About</Text>
+                </Group>
+              </Button>
+            </Stack>
+          </AppShell.Navbar>
+
+          {!isMobile && (
+            <AppShell.Footer p="xs">
+              <Footer />
+            </AppShell.Footer>
+          )}
+
+          <AppShell.Main>
+            <Container
+              size="xl"
+              py={{ base: 'sm', sm: 'md' }}
+              px={{ base: 'xs', sm: 'md' }}
+              className="app"
+            >
+              <AppRoutes
+                isDarkMode={computedColorScheme === 'dark'}
+                onToggleTheme={(isDark) => setColorScheme(isDark ? 'dark' : 'light')}
+              />
+            </Container>
+          </AppShell.Main>
+        </AppShell>
+      )}
+    </>
   );
 }
 
