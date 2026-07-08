@@ -85,6 +85,15 @@ body {
     border-radius: 10px;
   }
 
+  .player-area,
+  .queue-column {
+    height: auto;
+  }
+
+  .queue-scroll {
+    max-height: min(52vh, 420px);
+  }
+
   .queue-item {
     padding: 10px;
   }

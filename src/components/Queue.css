@@ -25,3 +25,13 @@
   min-width: 0;
   word-break: break-word;
 }
+
+@media (max-width: 768px) {
+  .queue-column {
+    height: auto;
+  }
+
+  .queue-scroll {
+    min-height: 240px;
+  }
+}

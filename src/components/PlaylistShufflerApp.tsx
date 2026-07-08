@@ -80,7 +80,7 @@ type YTNamespace = {
     element: HTMLDivElement,
     options: {
       videoId: string;
-      playerVars?: { autoplay?: number; controls?: number; rel?: number };
+      playerVars?: { autoplay?: number; controls?: number; rel?: number; playsinline?: number };
       events?: {
         onReady?: (event: YTPlayerReadyEvent) => void;
         onStateChange?: (event: { data: number }) => void;
@@ -90,6 +90,7 @@ type YTNamespace = {
   ) => YTPlayerInstance;
   PlayerState: {
     PLAYING: number;
+    PAUSED: number;
     ENDED: number;
   };
 };
@@ -201,6 +202,7 @@ export default function PlaylistShufflerApp({
   const playerReadyRef = useRef(false);
   const playerContainerRef = useRef<HTMLDivElement | null>(null);
   const pendingPlayIndexRef = useRef<number | null>(null);
+  const screenWakeLockRef = useRef<WakeLockSentinel | null>(null);
   const nowPlayingRef = useRef(nowPlaying);
   const loopCurrentSongRef = useRef(loopCurrentSong);
   const playIndexHandlerRef = useRef<(index: number) => void>(() => { });
@@ -294,6 +296,44 @@ export default function PlaylistShufflerApp({
       : `${normalizedTemplate} ${sanitizedTitle}`;
 
     return sanitizeTitleForTextFile(templated);
+  }, []);
+
+  const releaseScreenWakeLock = useCallback(async () => {
+    const wakeLock = screenWakeLockRef.current;
+    screenWakeLockRef.current = null;
+
+    if (!wakeLock) {
+      return;
+    }
+
+    try {
+      await wakeLock.release();
+    } catch {
+      // Ignore wake lock release failures.
+    }
+  }, []);
+
+  const requestScreenWakeLock = useCallback(async () => {
+    if (typeof navigator === 'undefined' || !('wakeLock' in navigator)) {
+      return;
+    }
+
+    const playerState = playerRef.current?.getPlayerState?.();
+    if (playerState !== window.YT?.PlayerState.PLAYING || screenWakeLockRef.current) {
+      return;
+    }
+
+    try {
+      const wakeLock = await navigator.wakeLock.request('screen');
+      screenWakeLockRef.current = wakeLock;
+      wakeLock.addEventListener('release', () => {
+        if (screenWakeLockRef.current === wakeLock) {
+          screenWakeLockRef.current = null;
+        }
+      });
+    } catch {
+      // Best effort only. Browsers may deny screen wake locks.
+    }
   }, []);
 
   useEffect(() => {
@@ -558,6 +598,27 @@ export default function PlaylistShufflerApp({
       setActionHandler('pause', null);
     };
   }, [isWebNowPlayingMode, nextVideo, previousVideo, togglePause]);
+
+  useEffect(() => {
+    if (typeof document === 'undefined' || !('wakeLock' in navigator)) {
+      return;
+    }
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        void requestScreenWakeLock();
+      } else {
+        void releaseScreenWakeLock();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      void releaseScreenWakeLock();
+    };
+  }, [releaseScreenWakeLock, requestScreenWakeLock]);
 
   useEffect(() => {
     if (typeof navigator === 'undefined' || !('mediaSession' in navigator)) {
@@ -866,7 +927,7 @@ export default function PlaylistShufflerApp({
 
       playerRef.current = new window.YT.Player(playerContainerRef.current, {
         videoId: '',
-        playerVars: { autoplay: 1, controls: 1, rel: 0 },
+        playerVars: { autoplay: 1, controls: 1, rel: 0, playsinline: 1 },
         events: {
           onReady: () => {
             playerReadyRef.current = true;
@@ -879,6 +940,15 @@ export default function PlaylistShufflerApp({
             }
           },
           onStateChange: (event) => {
+            if (event.data === window.YT?.PlayerState.PLAYING) {
+              void requestScreenWakeLock();
+            } else if (
+              event.data === window.YT?.PlayerState.PAUSED ||
+              event.data === window.YT?.PlayerState.ENDED
+            ) {
+              void releaseScreenWakeLock();
+            }
+
             if (event.data === window.YT?.PlayerState.ENDED) {
               if (loopCurrentSongRef.current && currentIndexRef.current >= 0) {
                 playIndexHandlerRef.current(currentIndexRef.current);
@@ -929,7 +999,7 @@ export default function PlaylistShufflerApp({
       tag.src = 'https://www.youtube.com/iframe_api';
       document.head.appendChild(tag);
     }
-  }, [nextVideo, playIndex, restoreQueueSession, updateMessage]);
+  }, [nextVideo, playIndex, releaseScreenWakeLock, requestScreenWakeLock, restoreQueueSession, updateMessage]);
 
   const handleImportYtdlp = useCallback(() => {
     fileInputYtdlpRef.current?.click();
