@@ -119,12 +119,13 @@ function App() {
                 component={Link}
                 to="/home"
                 variant={isHomeRoute ? 'light' : 'subtle'}
-                justify="flex-start"
+                justify="center"
+                px="xs"
                 fullWidth
                 aria-label="Home"
                 onClick={mobileNavHandlers.close}
               >
-                <Group gap="sm" wrap="nowrap">
+                <Group gap={0} justify="center" wrap="nowrap">
                   <IconHome size={18} />
                   <Text hiddenFrom="sm">Home</Text>
                 </Group>
@@ -133,12 +134,13 @@ function App() {
                 component={Link}
                 to="/settings"
                 variant={isSettingsRoute ? 'light' : 'subtle'}
-                justify="flex-start"
+                justify="center"
+                px="xs"
                 fullWidth
                 aria-label="Settings"
                 onClick={mobileNavHandlers.close}
               >
-                <Group gap="sm" wrap="nowrap">
+                <Group gap={0} justify="center" wrap="nowrap">
                   <IconSettings size={18} />
                   <Text hiddenFrom="sm">Settings</Text>
                 </Group>
@@ -147,12 +149,13 @@ function App() {
                 component={Link}
                 to="/about"
                 variant={isAboutRoute ? 'light' : 'subtle'}
-                justify="flex-start"
+                justify="center"
+                px="xs"
                 fullWidth
                 aria-label="About"
                 onClick={mobileNavHandlers.close}
               >
-                <Group gap="sm" wrap="nowrap">
+                <Group gap={0} justify="center" wrap="nowrap">
                   <IconInfoCircle size={18} />
                   <Text hiddenFrom="sm">About</Text>
                 </Group>
