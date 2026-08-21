@@ -52,7 +52,12 @@ function App() {
 
             {mobileNavOpened && (
               <Stack gap="xs" mt="md">
-                <Button component={Link} to="/home" variant={isHomeRoute ? 'light' : 'subtle'} fullWidth>
+                <Button
+                  component={Link}
+                  to="/home"
+                  variant={isHomeRoute ? 'light' : 'subtle'}
+                  fullWidth
+                >
                   Home
                 </Button>
                 <Button

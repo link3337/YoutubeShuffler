@@ -61,15 +61,20 @@ const YOUTUBE_VIDEO_ID_PATTERN = /^[a-zA-Z0-9_-]{8,}$/;
 const youtubeTitleCache = new Map<string, string>();
 
 type YouTubeTitleLookupDebug = {
-  status: 'invalid-id' | 'cache-hit' | 'request-start' | 'http-error' | 'empty-title' | 'success' | 'exception';
+  status:
+    | 'invalid-id'
+    | 'cache-hit'
+    | 'request-start'
+    | 'http-error'
+    | 'empty-title'
+    | 'success'
+    | 'exception';
   videoId: string;
   message: string;
   httpStatus?: number;
 };
 
-export async function fetchYouTubeVideoTitle(
-  videoId: string
-): Promise<string | null> {
+export async function fetchYouTubeVideoTitle(videoId: string): Promise<string | null> {
   const logLookup = (event: YouTubeTitleLookupDebug) => {
     const status = event.httpStatus ? `${event.status}(${event.httpStatus})` : event.status;
     void info(`[youtube-title-lookup] ${status} ${event.videoId} - ${event.message}`);

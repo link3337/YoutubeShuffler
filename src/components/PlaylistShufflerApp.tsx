@@ -205,8 +205,8 @@ export default function PlaylistShufflerApp({
   const screenWakeLockRef = useRef<WakeLockSentinel | null>(null);
   const nowPlayingRef = useRef(nowPlaying);
   const loopCurrentSongRef = useRef(loopCurrentSong);
-  const playIndexHandlerRef = useRef<(index: number) => void>(() => { });
-  const nextVideoHandlerRef = useRef<() => void>(() => { });
+  const playIndexHandlerRef = useRef<(index: number) => void>(() => {});
+  const nextVideoHandlerRef = useRef<() => void>(() => {});
   const failedVideoIdsRef = useRef<Set<string>>(new Set());
   const userRequestCountsRef = useRef<Record<string, number>>({});
   const fulfilledRequestVideoIdsRef = useRef<Set<string>>(new Set());
@@ -999,7 +999,14 @@ export default function PlaylistShufflerApp({
       tag.src = 'https://www.youtube.com/iframe_api';
       document.head.appendChild(tag);
     }
-  }, [nextVideo, playIndex, releaseScreenWakeLock, requestScreenWakeLock, restoreQueueSession, updateMessage]);
+  }, [
+    nextVideo,
+    playIndex,
+    releaseScreenWakeLock,
+    requestScreenWakeLock,
+    restoreQueueSession,
+    updateMessage
+  ]);
 
   const handleImportYtdlp = useCallback(() => {
     fileInputYtdlpRef.current?.click();
