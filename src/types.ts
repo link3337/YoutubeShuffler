@@ -1,6 +1,7 @@
 export type VideoItem = {
   videoId?: string;
   title?: string;
+  durationSeconds?: number;
 };
 
 export type ImportedPlaylistSource = 'yt-dlp' | 'html';

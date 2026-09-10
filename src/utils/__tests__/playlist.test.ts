@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import {
   extractVideoIdFromLine,
   fisherYatesShuffle,
+  formatDuration,
   isPrivateVideoTitle,
   parsePlaylistHtml,
   parseYtDlpJson,
@@ -51,6 +52,11 @@ describe('playlist utils', () => {
     expect(sanitizeTitleForTextFile('  Song   Title  ')).toBe('Song Title');
   });
 
+  it('formats playlist duration compactly', () => {
+    expect(formatDuration(3725)).toBe('1h 2m');
+    expect(formatDuration(125)).toBe('2m 5s');
+  });
+
   it('isPrivateVideoTitle treats private and deleted placeholders as unavailable', () => {
     expect(isPrivateVideoTitle('[Private video]')).toBe(true);
     expect(isPrivateVideoTitle('[Deleted video]')).toBe(true);
@@ -60,13 +66,13 @@ describe('playlist utils', () => {
   it('parseYtDlpJson parses playlist entries', () => {
     const payload = JSON.stringify({
       entries: [
-        { id: 'abcd1234', title: 'Song A' },
+        { id: 'abcd1234', title: 'Song A', duration: 125 },
         { url: 'efgh5678', title: 'Song B' }
       ]
     });
 
     expect(parseYtDlpJson(payload)).toEqual([
-      { videoId: 'abcd1234', title: 'Song A' },
+      { videoId: 'abcd1234', title: 'Song A', durationSeconds: 125 },
       { videoId: 'efgh5678', title: 'Song B' }
     ]);
   });

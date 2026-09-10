@@ -57,6 +57,38 @@ export function sanitizeTitleForTextFile(title: string): string {
   return String(title).replace(/\s+/g, ' ').trim();
 }
 
+export function formatDuration(totalSeconds: number): string {
+  const seconds = Math.max(0, Math.round(totalSeconds));
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  const remainingSeconds = seconds % 60;
+
+  if (hours) {
+    return `${hours}h ${minutes}m`;
+  }
+
+  if (minutes) {
+    return `${minutes}m ${remainingSeconds}s`;
+  }
+
+  return `${remainingSeconds}s`;
+}
+
+export function formatDurationClock(totalSeconds: number): string {
+  const seconds = Math.max(0, Math.round(totalSeconds));
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  const remainingSeconds = seconds % 60;
+  const paddedSeconds = String(remainingSeconds).padStart(2, '0');
+
+  if (hours) {
+    const paddedMinutes = String(minutes).padStart(2, '0');
+    return `${hours}:${paddedMinutes}:${paddedSeconds}`;
+  }
+
+  return `${minutes}:${paddedSeconds}`;
+}
+
 const YOUTUBE_VIDEO_ID_PATTERN = /^[a-zA-Z0-9_-]{8,}$/;
 const youtubeTitleCache = new Map<string, string>();
 
@@ -160,7 +192,12 @@ export function isPrivateVideoTitle(title: string | null | undefined): boolean {
 
 export function parseYtDlpJson(text: string): VideoItem[] {
   const data = JSON.parse(text) as {
-    entries?: Array<{ id?: string; url?: string; title?: string } | null>;
+    entries?: Array<{
+      id?: string;
+      url?: string;
+      title?: string;
+      duration?: number | null;
+    } | null>;
   };
 
   if (!data || !Array.isArray(data.entries)) {
@@ -176,10 +213,14 @@ export function parseYtDlpJson(text: string): VideoItem[] {
     if (!id) {
       continue;
     }
-    items.push({
+    const item: VideoItem = {
       videoId: id,
       title: entry.title ?? id
-    });
+    };
+    if (typeof entry.duration === 'number' && Number.isFinite(entry.duration)) {
+      item.durationSeconds = Math.max(0, entry.duration);
+    }
+    items.push(item);
   }
 
   if (!items.length) {

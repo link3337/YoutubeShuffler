@@ -4,9 +4,23 @@ Simple app to shuffle youtube playlists and queue the songs, with some basic twi
 
 ## download [yt-dlp](https://github.com/yt-dlp/yt-dlp#installation)
 
+On Windows, run the executable directly and choose the JSON output filename:
+
+```bat
+yt-dlp.exe --skip-download --dump-single-json --no-warnings "PLAYLIST_ID" > playlist.json
 ```
-yt-dlp --flat-playlist -J "PLAYLIST_URL" > playlist.json
+
+This performs full metadata extraction without downloading media, so it does not require ffmpeg. Do not add `--flat-playlist`; that mode often leaves video durations as `null`.
+
+
+
+For a faster export that only lists playlist entries, you can use `--flat-playlist`:
+
 ```
+yt-dlp.exe --flat-playlist -J "PLAYLIST_ID" > playlist.json
+```
+
+Flat playlist mode avoids fetching full metadata for each video, so fields such as `duration` may be `null` and the app cannot calculate the total playlist length.
 
 ## Twitch chat song requests
 

@@ -11,6 +11,7 @@ import {
 } from '@mantine/core';
 import { useEffect, useMemo, useState } from 'react';
 import type { VideoItem } from '../types';
+import { formatDuration, formatDurationClock } from '../utils/playlist';
 import copyTextToClipboard from '../utils/util';
 import './Queue.css';
 import QueueContextMenu from './QueueContextMenu';
@@ -82,6 +83,26 @@ export function Queue({
     [queue]
   );
 
+  const totalDuration = useMemo(
+    () =>
+      queue.reduce(
+        (total, item) =>
+          typeof item.durationSeconds === 'number' && Number.isFinite(item.durationSeconds)
+            ? total + item.durationSeconds
+            : total,
+        0
+      ),
+    [queue]
+  );
+  const hasCompleteDuration = useMemo(
+    () =>
+      queue.length > 0 &&
+      queue.every(
+        (item) => typeof item.durationSeconds === 'number' && Number.isFinite(item.durationSeconds)
+      ),
+    [queue]
+  );
+
   useEffect(() => {
     if (currentIndex == null || currentIndex < 0) return;
     const selector = `[data-queue-index=\"${currentIndex}\"]`;
@@ -122,6 +143,11 @@ export function Queue({
             <Group gap="xs" wrap="wrap">
               <Text fw={700}>Queue</Text>
               <Badge variant="light">{queue.length}</Badge>
+              {hasCompleteDuration && (
+                <Text c="dimmed" size="sm">
+                  Total length: {formatDuration(totalDuration)}
+                </Text>
+              )}
               {twitchConnected && (
                 <>
                   <Badge variant="outline" color="orange">
@@ -178,6 +204,12 @@ export function Queue({
                   <Text span className="queue-item-text">
                     {index + 1}. {item.title || item.videoId}
                   </Text>
+                  {typeof item.durationSeconds === 'number' &&
+                    Number.isFinite(item.durationSeconds) && (
+                      <Badge variant="light" color="gray" className="queue-item-duration">
+                        {formatDurationClock(item.durationSeconds)}
+                      </Badge>
+                    )}
                   {isRequestItem(item) && (
                     <Button
                       size="compact-xs"

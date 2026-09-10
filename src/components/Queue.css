@@ -26,6 +26,12 @@
   word-break: break-word;
 }
 
+.queue-item-duration {
+  flex-shrink: 0;
+  white-space: nowrap;
+  margin-left: auto;
+}
+
 @media (max-width: 768px) {
   .queue-column {
     height: auto;

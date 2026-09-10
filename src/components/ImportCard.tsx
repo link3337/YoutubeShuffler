@@ -1,3 +1,4 @@
+import { CodeHighlight } from '@mantine/code-highlight';
 import { Anchor, Button, Card, Code, Group, Stack, Text } from '@mantine/core';
 
 type ImportCardProps = {
@@ -47,13 +48,52 @@ export function ImportCard({
         </Group>
 
         <Text size="xs" c="dimmed">
-          <b>Recommended:</b> generate playlist.json via{' '}
+          <b>Recommended for playlist including metadata:</b> generate playlist.json via{' '}
           <Anchor href="https://github.com/yt-dlp/yt-dlp" target="_blank" rel="noreferrer">
             yt-dlp
           </Anchor>
-          <br />
-          <Code>yt-dlp --flat-playlist -J "PLAYLIST_URL" &gt; playlist.json</Code>
         </Text>
+        <CodeHighlight
+          language="bash"
+          code={
+            'yt-dlp.exe --skip-download --dump-single-json --no-warnings "PLAYLIST_URL" > playlist.json'
+          }
+          styles={{
+            codeHighlight: { overflow: 'visible' },
+            pre: {
+              whiteSpace: 'pre-wrap',
+              wordBreak: 'break-word',
+              borderRadius: 'var(--mantine-radius-sm)',
+              overflow: 'hidden'
+            },
+            controls: {
+              top: 'calc(-1 * var(--mantine-spacing-lg))',
+              borderRadius: 'var(--mantine-radius-sm)',
+              right: 0
+            }
+          }}
+        />
+        <Text size="xs" c="dimmed">
+          <b>Faster export without duration metadata:</b>
+        </Text>
+        <CodeHighlight
+          language="bash"
+          code={'yt-dlp.exe --flat-playlist -J "PLAYLIST_URL" > playlist.json'}
+          styles={{
+            codeHighlight: { overflow: 'visible' },
+            pre: {
+              whiteSpace: 'pre-wrap',
+              wordBreak: 'break-word',
+              borderRadius: 'var(--mantine-radius-sm)',
+              overflow: 'hidden'
+            },
+            controls: {
+              top: 'calc(-1 * var(--mantine-spacing-lg))',
+              borderRadius: 'var(--mantine-radius-sm)',
+              right: 0
+            }
+          }}
+        />
       </Stack>
     </Card>
   );

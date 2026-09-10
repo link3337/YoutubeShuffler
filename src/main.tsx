@@ -1,3 +1,4 @@
+import '@mantine/code-highlight/styles.css';
 import { MantineProvider, localStorageColorSchemeManager } from '@mantine/core';
 import '@mantine/core/styles.css';
 import React from 'react';
