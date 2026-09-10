@@ -1,4 +1,5 @@
 import { Anchor, Code, Divider, List, Modal, Stack, Text } from '@mantine/core';
+import { EXTERNAL_LINKS } from '../constants/links';
 
 type FaqModalProps = {
   opened: boolean;
@@ -13,7 +14,7 @@ export function FaqModal({ opened, onClose }: FaqModalProps) {
         <List size="sm" spacing="xs">
           <List.Item>
             Install from{' '}
-            <Anchor href="https://github.com/yt-dlp/yt-dlp" target="_blank" rel="noreferrer">
+            <Anchor href={EXTERNAL_LINKS.ytDlpRepo} target="_blank" rel="noreferrer">
               github.com/yt-dlp/yt-dlp
             </Anchor>
             .
@@ -29,7 +30,7 @@ export function FaqModal({ opened, onClose }: FaqModalProps) {
         <List size="sm" spacing="xs">
           <List.Item>
             Go to{' '}
-            <Anchor href="https://twitchtokengenerator.com/" target="_blank" rel="noreferrer">
+            <Anchor href={EXTERNAL_LINKS.twitchTokenGenerator} target="_blank" rel="noreferrer">
               twitchtokengenerator.com
             </Anchor>
             .

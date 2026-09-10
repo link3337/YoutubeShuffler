@@ -10,10 +10,7 @@ export default defineConfig(async () => ({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: [
-        'icon.ico',
-        'app-icon.png',
-      ],
+      includeAssets: ['icon.ico', 'app-icon.png'],
       manifest: {
         name: 'Youtube Playlist Shuffler',
         short_name: 'Youtube Shuffler',
@@ -27,7 +24,7 @@ export default defineConfig(async () => ({
           {
             src: 'app-icon.png',
             sizes: 'any',
-            type: 'image/png',
+            type: 'image/png'
           },
           {
             src: 'icon.ico',
@@ -58,10 +55,10 @@ export default defineConfig(async () => ({
     host: host || false,
     hmr: host
       ? {
-        protocol: 'ws',
-        host,
-        port: 1421
-      }
+          protocol: 'ws',
+          host,
+          port: 1421
+        }
       : undefined,
     watch: {
       // 3. tell Vite to ignore watching `src-tauri`

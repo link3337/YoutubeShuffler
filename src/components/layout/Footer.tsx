@@ -1,5 +1,6 @@
 import { ActionIcon, Anchor, Text } from '@mantine/core';
 import { IconBrandMantine, IconBrandReact, IconHeartFilled } from '@tabler/icons-react';
+import { EXTERNAL_LINKS } from '../../constants/links';
 
 export default function Footer() {
   return (
@@ -21,7 +22,7 @@ export default function Footer() {
         />
         by
         <Anchor
-          href="https://github.com/link3337"
+          href={EXTERNAL_LINKS.authorGithub}
           target="_blank"
           rel="noreferrer"
           style={{ margin: '0 6px' }}
@@ -38,7 +39,7 @@ export default function Footer() {
           aria-label="Vite"
           size="sm"
           component="a"
-          href="https://vite.dev"
+          href={EXTERNAL_LINKS.vite}
           target="_blank"
           rel="noreferrer"
         >
@@ -50,7 +51,7 @@ export default function Footer() {
           aria-label="Tauri"
           size="sm"
           component="a"
-          href="https://tauri.app"
+          href={EXTERNAL_LINKS.tauri}
           target="_blank"
           rel="noreferrer"
         >
@@ -62,7 +63,7 @@ export default function Footer() {
           aria-label="React"
           size="sm"
           component="a"
-          href="https://react.dev"
+          href={EXTERNAL_LINKS.react}
           target="_blank"
           rel="noreferrer"
         >
@@ -74,7 +75,7 @@ export default function Footer() {
           aria-label="Zustand"
           size="sm"
           component="a"
-          href="https://zustand.docs.pmnd.rs"
+          href={EXTERNAL_LINKS.zustand}
           target="_blank"
           rel="noreferrer"
         >
@@ -86,7 +87,7 @@ export default function Footer() {
           aria-label="Mantine"
           size="sm"
           component="a"
-          href="https://mantine.dev"
+          href={EXTERNAL_LINKS.mantine}
           target="_blank"
           rel="noreferrer"
         >
