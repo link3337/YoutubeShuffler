@@ -213,8 +213,8 @@ export default function PlaylistShufflerApp({
   const screenWakeLockRef = useRef<WakeLockSentinel | null>(null);
   const nowPlayingRef = useRef(nowPlaying);
   const loopCurrentSongRef = useRef(loopCurrentSong);
-  const playIndexHandlerRef = useRef<(index: number) => void>(() => { });
-  const nextVideoHandlerRef = useRef<() => void>(() => { });
+  const playIndexHandlerRef = useRef<(index: number) => void>(() => {});
+  const nextVideoHandlerRef = useRef<() => void>(() => {});
   const failedVideoIdsRef = useRef<Set<string>>(new Set());
   const userRequestCountsRef = useRef<Record<string, number>>({});
   const fulfilledRequestVideoIdsRef = useRef<Set<string>>(new Set());
@@ -1153,7 +1153,10 @@ export default function PlaylistShufflerApp({
         updateMessage('');
         setStatus('Reading yt-dlp JSON...');
         const text = await file.text();
-        const items = await restoreSavedTitles(parseYtDlpJson(text));
+        const items = uniqueBy(
+          await restoreSavedTitles(parseYtDlpJson(text)),
+          (item) => item.videoId
+        );
         setQueueAndPlay(items, 'yt-dlp import');
         void (async () => {
           try {
@@ -1193,7 +1196,10 @@ export default function PlaylistShufflerApp({
         updateMessage('');
         setStatus('Reading playlist HTML...');
         const text = await file.text();
-        const items = await restoreSavedTitles(await parsePlaylistHtml(text));
+        const items = uniqueBy(
+          await restoreSavedTitles(await parsePlaylistHtml(text)),
+          (item) => item.videoId
+        );
         setQueueAndPlay(items, 'HTML import (best-effort)');
         void (async () => {
           try {

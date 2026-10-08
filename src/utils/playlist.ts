@@ -94,13 +94,13 @@ const youtubeTitleCache = new Map<string, string>();
 
 type YouTubeTitleLookupDebug = {
   status:
-  | 'invalid-id'
-  | 'cache-hit'
-  | 'request-start'
-  | 'http-error'
-  | 'empty-title'
-  | 'success'
-  | 'exception';
+    | 'invalid-id'
+    | 'cache-hit'
+    | 'request-start'
+    | 'http-error'
+    | 'empty-title'
+    | 'success'
+    | 'exception';
   videoId: string;
   message: string;
   httpStatus?: number;
