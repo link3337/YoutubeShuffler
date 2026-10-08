@@ -4,10 +4,19 @@ type ManualInputCardProps = {
   value: string;
   onChange: (value: string) => void;
   onLoad: () => void;
+  onAddToQueue: () => void;
+  onPlayNext: () => void;
   onClear: () => void;
 };
 
-export function ManualInputCard({ value, onChange, onLoad, onClear }: ManualInputCardProps) {
+export function ManualInputCard({
+  value,
+  onChange,
+  onLoad,
+  onAddToQueue,
+  onPlayNext,
+  onClear
+}: ManualInputCardProps) {
   return (
     <Card withBorder radius="md" p="sm">
       <Stack gap="xs">
@@ -26,6 +35,12 @@ export function ManualInputCard({ value, onChange, onLoad, onClear }: ManualInpu
         <Group gap="xs" wrap="wrap">
           <Button size="compact-sm" onClick={onLoad}>
             Load + Shuffle
+          </Button>
+          <Button size="compact-sm" variant="light" onClick={onAddToQueue}>
+            Add to queue
+          </Button>
+          <Button size="compact-sm" variant="light" onClick={onPlayNext}>
+            Play next
           </Button>
           <Button size="compact-sm" variant="default" onClick={onClear}>
             Clear

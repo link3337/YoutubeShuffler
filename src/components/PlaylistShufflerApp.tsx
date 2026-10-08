@@ -14,6 +14,7 @@ import {
 import { useTwitchStore } from '../stores/twitchStore';
 import type { ImportedPlaylistSummary, MessageState, VideoItem } from '../types';
 import {
+  addItemsToImportedPlaylist,
   deleteImportedPlaylist,
   getImportedPlaylist,
   listImportedPlaylists,
@@ -131,6 +132,12 @@ export type PlaylistShufflerOutletContext = {
   handleLoadImportedPlaylist: (id: string) => void;
   handleDeleteImportedPlaylist: (id: string) => void;
   handleRenameImportedPlaylist: (id: string, nextName: string) => void;
+  handleAddSongToImportedPlaylist: (
+    id: string,
+    input: string
+  ) => Promise<{ ok: boolean; text: string }>;
+  handleSaveQueueAsPlaylist: () => void;
+  handleAddManualToQueue: (playNext: boolean) => void;
   isDarkMode: boolean;
   onToggleTheme: (isDark: boolean) => void;
   connectTwitchChat: () => void;
@@ -205,8 +212,8 @@ export default function PlaylistShufflerApp({
   const screenWakeLockRef = useRef<WakeLockSentinel | null>(null);
   const nowPlayingRef = useRef(nowPlaying);
   const loopCurrentSongRef = useRef(loopCurrentSong);
-  const playIndexHandlerRef = useRef<(index: number) => void>(() => {});
-  const nextVideoHandlerRef = useRef<() => void>(() => {});
+  const playIndexHandlerRef = useRef<(index: number) => void>(() => { });
+  const nextVideoHandlerRef = useRef<() => void>(() => { });
   const failedVideoIdsRef = useRef<Set<string>>(new Set());
   const userRequestCountsRef = useRef<Record<string, number>>({});
   const fulfilledRequestVideoIdsRef = useRef<Set<string>>(new Set());
@@ -1230,6 +1237,109 @@ export default function PlaylistShufflerApp({
     [refreshImportedPlaylists, updateMessage]
   );
 
+  const resolveSongItems = useCallback(async (input: string): Promise<VideoItem[]> => {
+    const ids = uniqueBy(
+      input
+        .split(/\r?\n/)
+        .map((line) => extractVideoIdFromLine(line))
+        .filter((id): id is string => Boolean(id))
+        .map((videoId) => ({ videoId })),
+      (item) => item.videoId
+    );
+    return Promise.all(
+      ids.map(async ({ videoId }) => ({
+        videoId,
+        title: (await fetchYouTubeVideoTitle(videoId)) || videoId
+      }))
+    );
+  }, []);
+
+  const handleAddSongToImportedPlaylist = useCallback(
+    async (id: string, input: string): Promise<{ ok: boolean; text: string }> => {
+      let result: { ok: boolean; text: string };
+      try {
+        const items = await resolveSongItems(input);
+        if (!items.length) {
+          result = { ok: false, text: 'No valid YouTube URL or video ID found.' };
+        } else {
+          const { summary, added } = await addItemsToImportedPlaylist(id, items);
+          await refreshImportedPlaylists();
+          result =
+            added > 0
+              ? { ok: true, text: `Added ${added} song(s) to "${summary.name}".` }
+              : { ok: false, text: `Already in "${summary.name}".` };
+        }
+      } catch (error) {
+        result = { ok: false, text: `Could not add song: ${String(error)}` };
+      }
+      updateMessage(result.text, result.ok);
+      return result;
+    },
+    [refreshImportedPlaylists, resolveSongItems, updateMessage]
+  );
+
+  const handleSaveQueueAsPlaylist = useCallback(() => {
+    void (async () => {
+      const items = queueRef.current.filter((item) => item.videoId);
+      if (!items.length) {
+        updateMessage('Queue is empty.');
+        return;
+      }
+      try {
+        const name = `Saved queue ${new Date().toLocaleString()}`;
+        await saveImportedPlaylist({ name, source: 'manual', items });
+        await refreshImportedPlaylists();
+        updateMessage(`Saved queue (${items.length} songs). Use Edit Name to rename.`, true);
+      } catch (error) {
+        updateMessage(`Could not save queue: ${String(error)}`);
+      }
+    })();
+  }, [refreshImportedPlaylists, updateMessage]);
+
+  const handleAddManualToQueue = useCallback(
+    (playNext: boolean) => {
+      void (async () => {
+        try {
+          const resolved = await resolveSongItems(manualInput);
+          const currentQueue = queueRef.current;
+          const queuedIds = new Set(currentQueue.map((item) => item.videoId));
+          const items = resolved.filter((item) => !queuedIds.has(item.videoId));
+          if (!resolved.length) {
+            updateMessage('No valid YouTube URL or video ID found.');
+            return;
+          }
+          if (!items.length) {
+            updateMessage('Already in the queue.');
+            return;
+          }
+
+          if (!currentQueue.length) {
+            setQueueAndPlay(items, 'Manual');
+            return;
+          }
+
+          const insertIndex = playNext
+            ? Math.min(Math.max(currentIndexRef.current + 1, 0), currentQueue.length)
+            : currentQueue.length;
+          const nextQueue = [
+            ...currentQueue.slice(0, insertIndex),
+            ...items,
+            ...currentQueue.slice(insertIndex)
+          ];
+          queueRef.current = nextQueue;
+          setQueue(nextQueue);
+          updateMessage(
+            `Added ${items.length} song(s) ${playNext ? 'as up next' : 'to the end of the queue'}.`,
+            true
+          );
+        } catch (error) {
+          updateMessage(`Could not add songs: ${String(error)}`);
+        }
+      })();
+    },
+    [manualInput, resolveSongItems, setQueueAndPlay, updateMessage]
+  );
+
   const handleLoadManual = useCallback(() => {
     try {
       updateMessage('');
@@ -1461,6 +1571,9 @@ export default function PlaylistShufflerApp({
     handleLoadImportedPlaylist,
     handleDeleteImportedPlaylist,
     handleRenameImportedPlaylist,
+    handleAddSongToImportedPlaylist,
+    handleSaveQueueAsPlaylist,
+    handleAddManualToQueue,
     isDarkMode,
     onToggleTheme,
     connectTwitchChat,

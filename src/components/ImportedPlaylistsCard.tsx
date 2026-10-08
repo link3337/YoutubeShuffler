@@ -1,4 +1,4 @@
-import { Badge, Button, Card, Group, Stack, Text, TextInput } from '@mantine/core';
+import { Badge, Button, Card, Group, Modal, Stack, Text, TextInput } from '@mantine/core';
 import { useState } from 'react';
 import type { ImportedPlaylistSummary } from '../types';
 
@@ -7,6 +7,9 @@ type ImportedPlaylistsCardProps = {
   onLoadPlaylist: (id: string) => void;
   onDeletePlaylist: (id: string) => void;
   onRenamePlaylist: (id: string, nextName: string) => void;
+  onAddSong: (id: string, input: string) => Promise<{ ok: boolean; text: string }>;
+  onSaveQueue: () => void;
+  hasQueue: boolean;
 };
 
 function formatImportedAt(value: string): string {
@@ -22,10 +25,32 @@ export function ImportedPlaylistsCard({
   playlists,
   onLoadPlaylist,
   onDeletePlaylist,
-  onRenamePlaylist
+  onRenamePlaylist,
+  onAddSong,
+  onSaveQueue,
+  hasQueue
 }: ImportedPlaylistsCardProps) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draftName, setDraftName] = useState('');
+  const [addingId, setAddingId] = useState<string | null>(null);
+  const [songInput, setSongInput] = useState('');
+  const [pendingDelete, setPendingDelete] = useState<ImportedPlaylistSummary | null>(null);
+  const [addResult, setAddResult] = useState<{ id: string; ok: boolean; text: string } | null>(
+    null
+  );
+
+  const submitSong = async () => {
+    if (!addingId || !songInput.trim()) {
+      return;
+    }
+    const id = addingId;
+    const result = await onAddSong(id, songInput);
+    setAddResult({ id, ...result });
+    if (result.ok) {
+      setAddingId(null);
+      setSongInput('');
+    }
+  };
 
   const beginEditing = (playlist: ImportedPlaylistSummary) => {
     setEditingId(playlist.id);
@@ -60,6 +85,9 @@ export function ImportedPlaylistsCard({
           </Text>
           <Badge variant="light">{playlists.length}</Badge>
         </Group>
+        <Button size="compact-sm" variant="light" disabled={!hasQueue} onClick={onSaveQueue}>
+          Save current queue as playlist
+        </Button>
 
         {!playlists.length ? (
           <Text size="sm" c="dimmed">
@@ -125,19 +153,89 @@ export function ImportedPlaylistsCard({
                     )}
                     <Button
                       size="compact-sm"
+                      variant="light"
+                      onClick={() => {
+                        setAddingId(addingId === playlist.id ? null : playlist.id);
+                        setSongInput('');
+                        setAddResult(null);
+                      }}
+                    >
+                      Add song
+                    </Button>
+                    <Button
+                      size="compact-sm"
                       variant="default"
                       color="red"
-                      onClick={() => onDeletePlaylist(playlist.id)}
+                      onClick={() => setPendingDelete(playlist)}
                     >
                       Remove
                     </Button>
                   </Group>
+                  {addingId === playlist.id && (
+                    <Group gap="xs" wrap="nowrap">
+                      <TextInput
+                        value={songInput}
+                        onChange={(event) => setSongInput(event.currentTarget.value)}
+                        size="xs"
+                        placeholder="YouTube URL or video ID"
+                        style={{ flex: 1 }}
+                        autoFocus
+                        onKeyDown={(event) => {
+                          if (event.key === 'Enter') {
+                            event.preventDefault();
+                            void submitSong();
+                          }
+                          if (event.key === 'Escape') {
+                            setAddingId(null);
+                          }
+                        }}
+                      />
+                      <Button size="compact-sm" onClick={() => void submitSong()}>
+                        Add
+                      </Button>
+                    </Group>
+                  )}
+                  {addResult?.id === playlist.id && (
+                    <Text size="sm" fw={600} c={addResult.ok ? 'green' : 'red'}>
+                      {addResult.text}
+                    </Text>
+                  )}
                 </Stack>
               </Card>
             ))}
           </Stack>
         )}
       </Stack>
+
+      <Modal
+        opened={pendingDelete !== null}
+        onClose={() => setPendingDelete(null)}
+        title="Remove saved playlist?"
+        size="sm"
+        centered
+      >
+        <Stack gap="md">
+          <Text size="sm">
+            "{pendingDelete?.name}" ({pendingDelete?.itemCount} items) will be permanently removed.
+          </Text>
+          <Group justify="flex-end" gap="xs">
+            <Button variant="default" onClick={() => setPendingDelete(null)}>
+              Cancel
+            </Button>
+            <Button
+              color="red"
+              onClick={() => {
+                if (pendingDelete) {
+                  onDeletePlaylist(pendingDelete.id);
+                }
+                setPendingDelete(null);
+              }}
+            >
+              Remove
+            </Button>
+          </Group>
+        </Stack>
+      </Modal>
     </Card>
   );
 }

@@ -28,7 +28,10 @@ export default function HomeRoute() {
     importedPlaylists,
     handleLoadImportedPlaylist,
     handleDeleteImportedPlaylist,
-    handleRenameImportedPlaylist
+    handleRenameImportedPlaylist,
+    handleAddSongToImportedPlaylist,
+    handleSaveQueueAsPlaylist,
+    handleAddManualToQueue
   } = useOutletContext<PlaylistShufflerOutletContext>();
 
   return (
@@ -50,6 +53,9 @@ export default function HomeRoute() {
           onLoadPlaylist={handleLoadImportedPlaylist}
           onDeletePlaylist={handleDeleteImportedPlaylist}
           onRenamePlaylist={handleRenameImportedPlaylist}
+          onAddSong={handleAddSongToImportedPlaylist}
+          onSaveQueue={handleSaveQueueAsPlaylist}
+          hasQueue={queue.length > 0}
         />
       </SimpleGrid>
 
@@ -63,6 +69,8 @@ export default function HomeRoute() {
           value={manualInput}
           onChange={setManualInput}
           onLoad={handleLoadManual}
+          onAddToQueue={() => handleAddManualToQueue(false)}
+          onPlayNext={() => handleAddManualToQueue(true)}
           onClear={handleClear}
         />
       </Modal>

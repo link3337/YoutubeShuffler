@@ -4,7 +4,7 @@ export type VideoItem = {
   durationSeconds?: number;
 };
 
-export type ImportedPlaylistSource = 'yt-dlp' | 'html';
+export type ImportedPlaylistSource = 'yt-dlp' | 'html' | 'manual';
 
 export type ImportedPlaylistSummary = {
   id: string;
