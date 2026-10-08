@@ -15,6 +15,8 @@ type PlayerQueueSectionProps = {
   onPlayIndex: (index: number) => void;
   onRemoveIndex: (index: number) => void;
   onRemoveAllRequests: () => void;
+  savedPlaylistName?: string | null;
+  onRemoveFromSavedPlaylist?: (index: number) => void;
   twitchConnected: boolean;
   onPrev: () => void;
   onNext: () => void;
@@ -31,6 +33,8 @@ export function PlayerQueueSection({
   onPlayIndex,
   onRemoveIndex,
   onRemoveAllRequests,
+  savedPlaylistName,
+  onRemoveFromSavedPlaylist,
   twitchConnected,
   onPrev,
   onNext,
@@ -57,6 +61,8 @@ export function PlayerQueueSection({
         onPlayIndex={onPlayIndex}
         onRemoveIndex={onRemoveIndex}
         onRemoveAllRequests={onRemoveAllRequests}
+        savedPlaylistName={savedPlaylistName}
+        onRemoveFromSavedPlaylist={onRemoveFromSavedPlaylist}
         twitchConnected={twitchConnected}
         isDarkMode={isDarkMode}
       />

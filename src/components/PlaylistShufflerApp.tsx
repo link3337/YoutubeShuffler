@@ -19,6 +19,7 @@ import {
   getImportedPlaylist,
   getImportedVideoTitles,
   listImportedPlaylists,
+  removeItemFromImportedPlaylist,
   renameImportedPlaylist,
   saveImportedPlaylist
 } from '../utils/importedPlaylistsDb';
@@ -213,8 +214,8 @@ export default function PlaylistShufflerApp({
   const screenWakeLockRef = useRef<WakeLockSentinel | null>(null);
   const nowPlayingRef = useRef(nowPlaying);
   const loopCurrentSongRef = useRef(loopCurrentSong);
-  const playIndexHandlerRef = useRef<(index: number) => void>(() => {});
-  const nextVideoHandlerRef = useRef<() => void>(() => {});
+  const playIndexHandlerRef = useRef<(index: number) => void>(() => { });
+  const nextVideoHandlerRef = useRef<() => void>(() => { });
   const failedVideoIdsRef = useRef<Set<string>>(new Set());
   const userRequestCountsRef = useRef<Record<string, number>>({});
   const fulfilledRequestVideoIdsRef = useRef<Set<string>>(new Set());
@@ -222,6 +223,10 @@ export default function PlaylistShufflerApp({
   const [webNowPlayingFileLabel, setWebNowPlayingFileLabel] = useState('Not selected');
   const [needsWebNowPlayingReauth, setNeedsWebNowPlayingReauth] = useState(false);
   const [importedPlaylists, setImportedPlaylists] = useState<ImportedPlaylistSummary[]>([]);
+  const [queueSourcePlaylist, setQueueSourcePlaylist] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
 
   const fileInputYtdlpRef = useRef<HTMLInputElement | null>(null);
   const fileInputHtmlRef = useRef<HTMLInputElement | null>(null);
@@ -787,6 +792,7 @@ export default function PlaylistShufflerApp({
       const shuffled = fisherYatesShuffle([...cleaned]);
       userRequestCountsRef.current = {};
       fulfilledRequestVideoIdsRef.current.clear();
+      setQueueSourcePlaylist(null);
       queueRef.current = shuffled;
       setQueue(shuffled);
       setCurrentIndex(0);
@@ -1160,11 +1166,12 @@ export default function PlaylistShufflerApp({
         setQueueAndPlay(items, 'yt-dlp import');
         void (async () => {
           try {
-            await saveImportedPlaylist({
+            const savedSummary = await saveImportedPlaylist({
               name: deriveImportedPlaylistName(file.name || '', 'yt-dlp import'),
               source: 'yt-dlp',
               items
             });
+            setQueueSourcePlaylist({ id: savedSummary.id, name: savedSummary.name });
             await refreshImportedPlaylists();
           } catch (saveError) {
             console.warn('Could not save imported playlist', saveError);
@@ -1203,11 +1210,12 @@ export default function PlaylistShufflerApp({
         setQueueAndPlay(items, 'HTML import (best-effort)');
         void (async () => {
           try {
-            await saveImportedPlaylist({
+            const savedSummary = await saveImportedPlaylist({
               name: deriveImportedPlaylistName(file.name || '', 'playlist HTML import'),
               source: 'html',
               items
             });
+            setQueueSourcePlaylist({ id: savedSummary.id, name: savedSummary.name });
             await refreshImportedPlaylists();
           } catch (saveError) {
             console.warn('Could not save imported playlist', saveError);
@@ -1239,6 +1247,7 @@ export default function PlaylistShufflerApp({
           }
 
           setQueueAndPlay(saved.items, `Saved import: ${saved.name}`);
+          setQueueSourcePlaylist({ id: saved.id, name: saved.name });
           updateMessage(`Loaded saved playlist: ${saved.name}`, true);
         } catch (error) {
           updateMessage(`Could not load saved playlist: ${String(error)}`);
@@ -1423,6 +1432,7 @@ export default function PlaylistShufflerApp({
     userRequestCountsRef.current = {};
     fulfilledRequestVideoIdsRef.current.clear();
     clearQueueSession();
+    setQueueSourcePlaylist(null);
   }, [clearQueueSession, resetPlaylistState, updateMessage]);
 
   const removeQueueItem = useCallback(
@@ -1494,6 +1504,34 @@ export default function PlaylistShufflerApp({
       setStatus,
       updateMessage
     ]
+  );
+
+  const removeQueueItemFromSavedPlaylist = useCallback(
+    (index: number) => {
+      const videoId = queueRef.current[index]?.videoId;
+      if (!queueSourcePlaylist || !videoId) {
+        return;
+      }
+
+      void (async () => {
+        try {
+          const { summary, removed } = await removeItemFromImportedPlaylist(
+            queueSourcePlaylist.id,
+            videoId
+          );
+          await refreshImportedPlaylists();
+          updateMessage(
+            removed > 0
+              ? `Removed song from "${summary.name}".`
+              : `Song was not in "${summary.name}".`,
+            removed > 0
+          );
+        } catch (error) {
+          updateMessage(`Could not remove song from playlist: ${String(error)}`);
+        }
+      })();
+    },
+    [queueSourcePlaylist, refreshImportedPlaylists, updateMessage]
   );
 
   const removeAllRequestedSongs = useCallback(() => {
@@ -1653,6 +1691,10 @@ export default function PlaylistShufflerApp({
           onPlayIndex={playIndex}
           onRemoveIndex={removeQueueItem}
           onRemoveAllRequests={removeAllRequestedSongs}
+          savedPlaylistName={queueSourcePlaylist?.name ?? null}
+          onRemoveFromSavedPlaylist={
+            queueSourcePlaylist ? removeQueueItemFromSavedPlaylist : undefined
+          }
           twitchConnected={twitchConnected}
           onPrev={previousVideo}
           onNext={nextVideo}

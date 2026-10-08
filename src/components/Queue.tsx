@@ -5,6 +5,7 @@ import {
   Card,
   Checkbox,
   Group,
+  Modal,
   ScrollArea,
   Text,
   TextInput
@@ -22,6 +23,8 @@ type QueueProps = {
   onPlayIndex: (index: number) => void;
   onRemoveIndex: (index: number) => void;
   onRemoveAllRequests: () => void;
+  savedPlaylistName?: string | null;
+  onRemoveFromSavedPlaylist?: (index: number) => void;
   twitchConnected: boolean;
   isDarkMode?: boolean;
 };
@@ -38,9 +41,12 @@ export function Queue({
   onPlayIndex,
   onRemoveIndex,
   onRemoveAllRequests,
+  savedPlaylistName,
+  onRemoveFromSavedPlaylist,
   twitchConnected,
   isDarkMode
 }: QueueProps) {
+  const [pendingPlaylistRemoval, setPendingPlaylistRemoval] = useState<number | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [useRegexSearch, setUseRegexSearch] = useState(false);
   const [contextMenu, setContextMenu] = useState<{
@@ -258,8 +264,47 @@ export function Queue({
               setContextMenu({ visible: false, x: 0, y: 0, index: null });
               onRemoveIndex(idx);
             }}
+            onRemoveFromPlaylist={
+              onRemoveFromSavedPlaylist
+                ? () => {
+                  const idx = contextMenu.index;
+                  setContextMenu({ visible: false, x: 0, y: 0, index: null });
+                  if (idx != null && idx >= 0) setPendingPlaylistRemoval(idx);
+                }
+                : undefined
+            }
           />
         )}
+        <Modal
+          opened={pendingPlaylistRemoval != null}
+          onClose={() => setPendingPlaylistRemoval(null)}
+          title="Remove from saved playlist?"
+          centered
+        >
+          <Text size="sm" mb="md">
+            Remove &quot;
+            {pendingPlaylistRemoval != null
+              ? queue[pendingPlaylistRemoval]?.title || queue[pendingPlaylistRemoval]?.videoId
+              : ''}
+            &quot; from {savedPlaylistName ? `"${savedPlaylistName}"` : 'the saved playlist'}? The
+            current queue is not changed.
+          </Text>
+          <Group justify="flex-end">
+            <Button variant="default" onClick={() => setPendingPlaylistRemoval(null)}>
+              Cancel
+            </Button>
+            <Button
+              color="red"
+              onClick={() => {
+                const idx = pendingPlaylistRemoval;
+                setPendingPlaylistRemoval(null);
+                if (idx != null) onRemoveFromSavedPlaylist?.(idx);
+              }}
+            >
+              Remove
+            </Button>
+          </Group>
+        </Modal>
       </Card>
     </Box>
   );

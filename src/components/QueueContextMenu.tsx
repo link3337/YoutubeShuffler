@@ -6,6 +6,7 @@ type QueueContextMenuProps = {
   isDarkMode: boolean;
   onCopyLink: () => void;
   onRemove: () => void;
+  onRemoveFromPlaylist?: () => void;
 };
 
 export function QueueContextMenu({
@@ -13,7 +14,8 @@ export function QueueContextMenu({
   y,
   isDarkMode,
   onCopyLink,
-  onRemove
+  onRemove,
+  onRemoveFromPlaylist
 }: QueueContextMenuProps) {
   const theme = useMantineTheme();
 
@@ -52,6 +54,17 @@ export function QueueContextMenu({
         >
           Remove
         </Button>
+        {onRemoveFromPlaylist && (
+          <Button
+            variant="subtle"
+            color="red"
+            onClick={onRemoveFromPlaylist}
+            aria-label="Remove from saved playlist"
+            role="menuitem"
+          >
+            Remove from playlist
+          </Button>
+        )}
       </Group>
     </div>
   );

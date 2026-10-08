@@ -178,6 +178,31 @@ export async function addItemsToImportedPlaylist(
   return { summary: toSummary(record), added: fresh.length };
 }
 
+export async function removeItemFromImportedPlaylist(
+  id: string,
+  videoId: string
+): Promise<{ summary: ImportedPlaylistSummary; removed: number }> {
+  const db = await getDb();
+  const tx = db.transaction(STORE_NAME, 'readwrite');
+  const store = tx.objectStore(STORE_NAME);
+
+  const record = await requestToPromise(
+    store.get(id) as IDBRequest<ImportedPlaylistRecord | undefined>
+  );
+  if (!record) {
+    throw new Error('Saved playlist not found.');
+  }
+
+  const remaining = record.items.filter((item) => item.videoId !== videoId);
+  const removed = record.items.length - remaining.length;
+  if (removed > 0) {
+    record.items = remaining;
+    record.itemCount = remaining.length;
+    await requestToPromise(store.put(record));
+  }
+  return { summary: toSummary(record), removed };
+}
+
 export async function renameImportedPlaylist(
   id: string,
   nextName: string
