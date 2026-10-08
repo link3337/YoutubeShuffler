@@ -4,6 +4,7 @@ import type {
   ImportedPlaylistSummary,
   VideoItem
 } from '../types';
+import { isPrivateVideoTitle, sanitizeTitleForTextFile } from './playlist';
 
 const DB_NAME = 'ytpl_media_db';
 const DB_VERSION = 1;
@@ -83,6 +84,38 @@ export async function listImportedPlaylists(): Promise<ImportedPlaylistSummary[]
   const all = await requestToPromise(store.getAll() as IDBRequest<ImportedPlaylistRecord[]>);
 
   return all.map(toSummary).sort((a, b) => Date.parse(b.importedAt) - Date.parse(a.importedAt));
+}
+
+export async function getImportedVideoTitles(videoIds: string[]): Promise<Map<string, string>> {
+  const requestedIds = new Set(videoIds);
+  const titles = new Map<string, string>();
+  if (!requestedIds.size) {
+    return titles;
+  }
+
+  const db = await getDb();
+  const tx = db.transaction(STORE_NAME, 'readonly');
+  const store = tx.objectStore(STORE_NAME);
+  const playlists = await requestToPromise(store.getAll() as IDBRequest<ImportedPlaylistRecord[]>);
+
+  for (const playlist of playlists) {
+    for (const item of playlist.items) {
+      const videoId = item.videoId || '';
+      const title = sanitizeTitleForTextFile(item.title || '');
+      if (
+        !requestedIds.has(videoId) ||
+        !title ||
+        title === videoId ||
+        isPrivateVideoTitle(title) ||
+        titles.has(videoId)
+      ) {
+        continue;
+      }
+      titles.set(videoId, title);
+    }
+  }
+
+  return titles;
 }
 
 export async function saveImportedPlaylist(

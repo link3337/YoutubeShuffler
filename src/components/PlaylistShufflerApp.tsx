@@ -17,6 +17,7 @@ import {
   addItemsToImportedPlaylist,
   deleteImportedPlaylist,
   getImportedPlaylist,
+  getImportedVideoTitles,
   listImportedPlaylists,
   renameImportedPlaylist,
   saveImportedPlaylist
@@ -1118,6 +1119,28 @@ export default function PlaylistShufflerApp({
     fileInputHtmlRef.current?.click();
   }, []);
 
+  // yt-dlp reports null/placeholder titles for deleted videos, so reuse titles from earlier imports.
+  const restoreSavedTitles = useCallback(async (items: VideoItem[]): Promise<VideoItem[]> => {
+    const missing = items.filter((item) => {
+      const title = (item.title || '').trim();
+      return item.videoId && (!title || title === item.videoId || isPrivateVideoTitle(title));
+    });
+    if (!missing.length) {
+      return items;
+    }
+
+    try {
+      const saved = await getImportedVideoTitles(missing.map((item) => item.videoId as string));
+      return items.map((item) => {
+        const savedTitle = item.videoId ? saved.get(item.videoId) : undefined;
+        return savedTitle && missing.includes(item) ? { ...item, title: savedTitle } : item;
+      });
+    } catch (error) {
+      console.warn('Could not restore saved titles', error);
+      return items;
+    }
+  }, []);
+
   const handleYtdlpFileChange = useCallback(
     async (event: ChangeEvent<HTMLInputElement>) => {
       const file = event.currentTarget.files?.[0];
@@ -1130,7 +1153,7 @@ export default function PlaylistShufflerApp({
         updateMessage('');
         setStatus('Reading yt-dlp JSON...');
         const text = await file.text();
-        const items = parseYtDlpJson(text);
+        const items = await restoreSavedTitles(parseYtDlpJson(text));
         setQueueAndPlay(items, 'yt-dlp import');
         void (async () => {
           try {
@@ -1149,7 +1172,13 @@ export default function PlaylistShufflerApp({
         updateMessage(String(error instanceof Error ? error.message : error));
       }
     },
-    [deriveImportedPlaylistName, refreshImportedPlaylists, setQueueAndPlay, updateMessage]
+    [
+      deriveImportedPlaylistName,
+      refreshImportedPlaylists,
+      restoreSavedTitles,
+      setQueueAndPlay,
+      updateMessage
+    ]
   );
 
   const handleHtmlFileChange = useCallback(
@@ -1164,7 +1193,7 @@ export default function PlaylistShufflerApp({
         updateMessage('');
         setStatus('Reading playlist HTML...');
         const text = await file.text();
-        const items = await parsePlaylistHtml(text);
+        const items = await restoreSavedTitles(await parsePlaylistHtml(text));
         setQueueAndPlay(items, 'HTML import (best-effort)');
         void (async () => {
           try {
@@ -1183,7 +1212,13 @@ export default function PlaylistShufflerApp({
         updateMessage(String(error instanceof Error ? error.message : error));
       }
     },
-    [deriveImportedPlaylistName, refreshImportedPlaylists, setQueueAndPlay, updateMessage]
+    [
+      deriveImportedPlaylistName,
+      refreshImportedPlaylists,
+      restoreSavedTitles,
+      setQueueAndPlay,
+      updateMessage
+    ]
   );
 
   const handleLoadImportedPlaylist = useCallback(
@@ -1246,10 +1281,17 @@ export default function PlaylistShufflerApp({
         .map((videoId) => ({ videoId })),
       (item) => item.videoId
     );
+    let importedTitles = new Map<string, string>();
+    try {
+      importedTitles = await getImportedVideoTitles(ids.map((item) => item.videoId));
+    } catch (error) {
+      console.warn('Could not look up imported playlist titles', error);
+    }
+
     return Promise.all(
       ids.map(async ({ videoId }) => ({
         videoId,
-        title: (await fetchYouTubeVideoTitle(videoId)) || videoId
+        title: (await fetchYouTubeVideoTitle(videoId)) || importedTitles.get(videoId) || videoId
       }))
     );
   }, []);
