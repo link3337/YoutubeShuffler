@@ -52,6 +52,10 @@ const NOW_PLAYING_FILE_NAME = 'current_song.txt';
 const REQUEST_TITLE_PATTERN = /^\[Request by [^\]]+\]\s+/i;
 const REQUEST_TITLE_EXTRACT_PATTERN = /^\[Request by ([^\]]+)\]\s+/i;
 
+function collectVideoIds(items: VideoItem[]): Set<string> {
+  return new Set(items.map((item) => item.videoId).filter((id): id is string => Boolean(id)));
+}
+
 function isRequestQueueItem(item: VideoItem): boolean {
   return REQUEST_TITLE_PATTERN.test((item.title || '').trim());
 }
@@ -226,6 +230,7 @@ export default function PlaylistShufflerApp({
   const [queueSourcePlaylist, setQueueSourcePlaylist] = useState<{
     id: string;
     name: string;
+    videoIds: ReadonlySet<string>;
   } | null>(null);
 
   const fileInputYtdlpRef = useRef<HTMLInputElement | null>(null);
@@ -1171,7 +1176,11 @@ export default function PlaylistShufflerApp({
               source: 'yt-dlp',
               items
             });
-            setQueueSourcePlaylist({ id: savedSummary.id, name: savedSummary.name });
+            setQueueSourcePlaylist({
+              id: savedSummary.id,
+              name: savedSummary.name,
+              videoIds: collectVideoIds(items)
+            });
             await refreshImportedPlaylists();
           } catch (saveError) {
             console.warn('Could not save imported playlist', saveError);
@@ -1215,7 +1224,11 @@ export default function PlaylistShufflerApp({
               source: 'html',
               items
             });
-            setQueueSourcePlaylist({ id: savedSummary.id, name: savedSummary.name });
+            setQueueSourcePlaylist({
+              id: savedSummary.id,
+              name: savedSummary.name,
+              videoIds: collectVideoIds(items)
+            });
             await refreshImportedPlaylists();
           } catch (saveError) {
             console.warn('Could not save imported playlist', saveError);
@@ -1247,7 +1260,11 @@ export default function PlaylistShufflerApp({
           }
 
           setQueueAndPlay(saved.items, `Saved import: ${saved.name}`);
-          setQueueSourcePlaylist({ id: saved.id, name: saved.name });
+          setQueueSourcePlaylist({
+            id: saved.id,
+            name: saved.name,
+            videoIds: collectVideoIds(saved.items)
+          });
           updateMessage(`Loaded saved playlist: ${saved.name}`, true);
         } catch (error) {
           updateMessage(`Could not load saved playlist: ${String(error)}`);
@@ -1520,6 +1537,16 @@ export default function PlaylistShufflerApp({
             videoId
           );
           await refreshImportedPlaylists();
+          if (removed > 0) {
+            setQueueSourcePlaylist((current) => {
+              if (!current || current.id !== queueSourcePlaylist.id) {
+                return current;
+              }
+              const videoIds = new Set(current.videoIds);
+              videoIds.delete(videoId);
+              return { ...current, videoIds };
+            });
+          }
           updateMessage(
             removed > 0
               ? `Removed song from "${summary.name}".`
@@ -1692,6 +1719,7 @@ export default function PlaylistShufflerApp({
           onRemoveIndex={removeQueueItem}
           onRemoveAllRequests={removeAllRequestedSongs}
           savedPlaylistName={queueSourcePlaylist?.name ?? null}
+          savedPlaylistVideoIds={queueSourcePlaylist?.videoIds}
           onRemoveFromSavedPlaylist={
             queueSourcePlaylist ? removeQueueItemFromSavedPlaylist : undefined
           }

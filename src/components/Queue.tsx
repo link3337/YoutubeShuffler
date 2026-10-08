@@ -24,6 +24,7 @@ type QueueProps = {
   onRemoveIndex: (index: number) => void;
   onRemoveAllRequests: () => void;
   savedPlaylistName?: string | null;
+  savedPlaylistVideoIds?: ReadonlySet<string>;
   onRemoveFromSavedPlaylist?: (index: number) => void;
   twitchConnected: boolean;
   isDarkMode?: boolean;
@@ -42,6 +43,7 @@ export function Queue({
   onRemoveIndex,
   onRemoveAllRequests,
   savedPlaylistName,
+  savedPlaylistVideoIds,
   onRemoveFromSavedPlaylist,
   twitchConnected,
   isDarkMode
@@ -265,7 +267,8 @@ export function Queue({
               onRemoveIndex(idx);
             }}
             onRemoveFromPlaylist={
-              onRemoveFromSavedPlaylist
+              onRemoveFromSavedPlaylist &&
+                savedPlaylistVideoIds?.has(queue[contextMenu.index]?.videoId ?? '')
                 ? () => {
                   const idx = contextMenu.index;
                   setContextMenu({ visible: false, x: 0, y: 0, index: null });
